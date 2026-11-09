@@ -1,8 +1,80 @@
 @import "tailwindcss";
 
+:root {
+  color-scheme: light dark;
+  --bg: #f6f6f3;
+  --surface: #ffffff;
+  --ink: #15171c;
+  --muted: #5b6070;
+  --line: #e3e3de;
+  --accent: #0e6b5c;
+  --accent-soft: #e3f1ee;
+  --accent-ink: #0a4f44;
+  --warn-soft: #fdede3;
+  --warn-ink: #8a3109;
+  --warn-line: #f0cdb8;
+  --paper: #ffffff;
+  --paper-ink: #15171c;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111317;
+  --surface: #1a1d23;
+  --ink: #ecedef;
+  --muted: #a3a8b3;
+  --line: #2c3038;
+  --accent: #3cc3a3;
+  --accent-soft: #12332d;
+  --accent-ink: #8fe0cb;
+  --warn-soft: #3a2216;
+  --warn-ink: #f6b48e;
+  --warn-line: #6b3a22;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #111317;
+    --surface: #1a1d23;
+    --ink: #ecedef;
+    --muted: #a3a8b3;
+    --line: #2c3038;
+    --accent: #3cc3a3;
+    --accent-soft: #12332d;
+    --accent-ink: #8fe0cb;
+    --warn-soft: #3a2216;
+    --warn-ink: #f6b48e;
+    --warn-line: #6b3a22;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-ink: var(--warn-ink);
+  --color-warn-line: var(--warn-line);
+  --color-paper: var(--paper);
+  --color-paper-ink: var(--paper-ink);
+  --font-sans: "Inter Variable", sans-serif;
+  --font-display: "Space Grotesk Variable", sans-serif;
+  --font-mono: "JetBrains Mono Variable", monospace;
+}
+
 @layer base {
   body {
-    @apply m-0 bg-slate-50 font-sans text-slate-900 antialiased;
+    @apply m-0 bg-bg font-sans text-ink antialiased;
   }
 
   button {
@@ -11,10 +83,10 @@
 
   button:focus-visible,
   textarea:focus-visible {
-    @apply outline-2 outline-offset-4 outline-teal-700;
+    @apply outline-2 outline-offset-4 outline-accent;
   }
 
   mark {
-    @apply rounded bg-amber-200 px-0.5 text-slate-950;
+    @apply rounded bg-warn-soft px-0.5 text-warn-ink;
   }
 }

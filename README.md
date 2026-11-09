@@ -15,6 +15,7 @@ Em desenvolvimento. Acompanhe o [roadmap](https://github.com/users/DiegoCard117/
 - [x] Schema do banco de fatos e do rascunho gerado
 - [x] Checador anti-invenção
 - [x] Playground do checador no navegador
+- [x] Tema claro/escuro e interface em português e inglês
 - [ ] Aderência fato × vaga, geração com LLM, editor do banco de fatos, exportação em PDF
 
 ## Estrutura
