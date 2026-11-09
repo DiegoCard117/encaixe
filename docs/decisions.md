@@ -26,8 +26,31 @@ Mudou de ideia? Edite a linha e diga o motivo no commit.
 
 - **React + Vite**, publicado no GitHub Pages.
 - **Tailwind** para estilo e **react-hook-form + zod** reaproveitando os schemas do core. Componentes do shadcn/ui só quando precisar.
-- **Interface em pt-BR.** Geração de currículo em pt-BR ou inglês (`locale` do banco).
+- **i18n desde o primeiro componente: pt-BR e en.** Nenhum texto de interface fica fixo no JSX; tudo sai de dicionários tipados por idioma (o TypeScript garante que os dois têm as mesmas chaves), datas e números via `Intl`. Sem biblioteca enquanto isso bastar. Idioma inicial: o do navegador, com troca manual.
+- **O core não fala com o usuário.** Ele devolve códigos (`code`, `value`, `path`), nunca frases; a tradução é da interface. Vale para violações e erros de validação.
+- O idioma da interface e o do currículo gerado são independentes (`locale` do banco).
+- **Tema claro e escuro desde o início.** Cores só por tokens (variáveis CSS) com valor para cada tema; segue o sistema por padrão, com troca manual. A prévia do currículo é "papel" e continua clara no tema escuro, como o PDF.
 - **Saída em PDF** pelo CSS de impressão, com um modelo legível por ATS no MVP.
+
+## Identidade visual
+
+Prévia: canvas "Encaixe — prévia do MVP" (banco de fatos, aderência, revisão clara e escura).
+
+- **Tom:** sóbrio e confiável. "Seu currículo, encaixado na vaga. Sem inventar nada."
+- **Logo:** duas peças que se encaixam (recorte + dente).
+- **Tipografia:** Space Grotesk (títulos), Inter (texto), JetBrains Mono (ids de fatos).
+- **Cores:** destaque verde-petróleo; laranja só para invenções e lacunas (não vermelho, para não depender de vermelho/verde).
+
+| Token                          | Claro                             | Escuro                            |
+| ------------------------------ | --------------------------------- | --------------------------------- |
+| fundo                          | `#F6F6F3`                         | `#111317`                         |
+| superfície                     | `#FFFFFF`                         | `#1A1D23`                         |
+| texto                          | `#15171C`                         | `#ECEDEF`                         |
+| texto suave                    | `#5B6070`                         | `#A3A8B3`                         |
+| linha                          | `#E3E3DE`                         | `#2C3038`                         |
+| destaque                       | `#0E6B5C`                         | `#3CC3A3`                         |
+| destaque suave (fundo / texto) | `#E3F1EE` / `#0A4F44`             | `#12332D` / `#8FE0CB`             |
+| alerta (fundo / texto / borda) | `#FDEDE3` / `#8A3109` / `#F0CDB8` | `#3A2216` / `#F6B48E` / `#6B3A22` |
 
 ## Produto
 
@@ -48,4 +71,3 @@ Abrir o app → montar o banco de fatos → colar a vaga → ver a aderência �
 
 - Qual banco/serviço usar na persistência opcional.
 - Provedor de LLM do MVP.
-- Identidade visual: logo, paleta, tipografia e tom de voz.
