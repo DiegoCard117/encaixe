@@ -1,6 +1,7 @@
 import { indexFacts, type FactBank } from "../schema/bank";
 import type { Fact, SkillFact } from "../schema/facts";
 import type { ResumeDraft, SourcedText } from "../schema/resume";
+import { createMentionFinder } from "./mentions";
 
 export type ViolationCode =
   "unknown_fact" | "archived_fact" | "wrong_context" | "unsupported_skill" | "unsupported_number";
@@ -13,7 +14,6 @@ export interface Violation {
   value: string;
 }
 
-const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const fold = (text: string) => text.toLocaleLowerCase("pt-BR");
 
 function textFields(value: unknown): string[] {
@@ -49,15 +49,10 @@ export function checkResumeDraft(bank: FactBank, draft: ResumeDraft): Violation[
       for (const name of [fact.name, ...fact.aliases]) names.set(fold(name), fact);
     }
   }
-  const alternatives = [...names.keys()].sort((a, b) => b.length - a.length).map(escapeRegex);
-  const skillPattern = new RegExp(
-    `(?<![\\p{L}\\p{N}])(?:${alternatives.join("|")})(?![\\p{L}\\p{N}])`,
-    "giu",
-  );
-  const mentions = (text: string) => (names.size ? [...text.matchAll(skillPattern)] : []);
+  const mentions = createMentionFinder(names.keys());
   const withoutSkills = (text: string) => {
     for (const match of mentions(text).reverse()) {
-      text = text.slice(0, match.index) + " " + text.slice(match.index + match[0].length);
+      text = text.slice(0, match.index) + " " + text.slice(match.index + match.match.length);
     }
     return text;
   };
@@ -98,15 +93,15 @@ export function checkResumeDraft(bank: FactBank, draft: ResumeDraft): Violation[
     }
     for (const text of texts) {
       for (const match of mentions(text)) {
-        const skill = names.get(fold(match[0]));
+        const skill = names.get(match.key);
         if (skill) supportedSkills.add(skill.id);
       }
       numbers(withoutSkills(text)).forEach((number) => supportedNumbers.add(number.value));
     }
     for (const match of mentions(sourced.text)) {
-      const skill = names.get(fold(match[0]));
+      const skill = names.get(match.key);
       if (skill && !supportedSkills.has(skill.id)) {
-        add("unsupported_skill", [...path, "text"], match[0]);
+        add("unsupported_skill", [...path, "text"], match.match);
       }
     }
     for (const number of numbers(withoutSkills(sourced.text))) {
