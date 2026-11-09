@@ -1,12 +1,10 @@
 import { z } from "zod";
 
 /** Texto obrigatório, sem espaços nas pontas. */
-export const NonEmptyText = (max: number) => z.string().trim().min(1, "obrigatório").max(max);
+export const NonEmptyText = (max: number) => z.string().trim().min(1, "required").max(max);
 
 /** Mês/ano no formato "YYYY-MM". Comparável como string. */
-export const YearMonthSchema = z
-  .string()
-  .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'data deve estar no formato "AAAA-MM"');
+export const YearMonthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "invalid_year_month");
 export type YearMonth = z.infer<typeof YearMonthSchema>;
 
 /** Período. end = null significa "atual". */
@@ -16,7 +14,7 @@ export const PeriodSchema = z
     end: YearMonthSchema.nullable(),
   })
   .refine((p) => p.end === null || p.end >= p.start, {
-    message: "fim não pode ser antes do início",
+    message: "period_end_before_start",
     path: ["end"],
   });
 export type Period = z.infer<typeof PeriodSchema>;
@@ -28,7 +26,7 @@ export const TagsSchema = z
   .array(TagSchema)
   .max(30)
   .default([])
-  .refine((tags) => new Set(tags).size === tags.length, "tags repetidas");
+  .refine((tags) => new Set(tags).size === tags.length, "duplicate_tags");
 
 /**
  * Número citável. A regra anti-invenção só aceita números no texto gerado

@@ -43,7 +43,12 @@ export const FactBankSchema = z
 
     bank.facts.forEach((fact, i) => {
       if (byId.has(fact.id)) {
-        ctx.addIssue({ code: "custom", message: `id duplicado: ${fact.id}`, path: ["facts", i, "id"] });
+        ctx.addIssue({
+          code: "custom",
+          message: "duplicate_id",
+          path: ["facts", i, "id"],
+          params: { id: fact.id },
+        });
       }
       byId.set(fact.id, fact);
     });
@@ -51,12 +56,13 @@ export const FactBankSchema = z
     const checkRef = (refId: string, allowed: readonly FactKind[], path: (string | number)[]) => {
       const target = byId.get(refId);
       if (!target) {
-        ctx.addIssue({ code: "custom", message: `referência inexistente: ${refId}`, path });
+        ctx.addIssue({ code: "custom", message: "missing_reference", path, params: { id: refId } });
       } else if (!allowed.includes(target.kind)) {
         ctx.addIssue({
           code: "custom",
-          message: `${refId} é ${target.kind}; esperado ${allowed.join(" | ")}`,
+          message: "wrong_reference_kind",
           path,
+          params: { id: refId, actual: target.kind, expected: allowed },
         });
       }
     };
@@ -81,8 +87,9 @@ export const FactBankSchema = z
           if (owner && owner !== fact.id) {
             ctx.addIssue({
               code: "custom",
-              message: `nome/apelido "${name}" já usado por ${owner}`,
+              message: "ambiguous_skill_name",
               path: ["facts", i, "name"],
+              params: { name, owner },
             });
           }
           skillNames.set(key, fact.id);

@@ -11,13 +11,13 @@ import { FactIdSchema, factIdOf } from "./ids";
  *    o valor real no banco.
  * 2. Só textos reescritos (headline, resumo, bullets) são livres, e cada um
  *    precisa citar pelo menos um fact_id de origem em `sourceFactIds`.
- * 3. A checagem em código (pendente #2) valida que cada id citado existe,
+ * 3. A checagem em código (`checkResumeDraft`) valida que cada id citado existe,
  *    pertence ao contexto certo e que tecnologias/números do texto existem
  *    nos fatos citados.
  */
 export const SourcedTextSchema = z.object({
   text: NonEmptyText(600),
-  sourceFactIds: z.array(FactIdSchema).min(1, "todo texto gerado precisa citar ao menos um fact_id"),
+  sourceFactIds: z.array(FactIdSchema).min(1, "source_required"),
 });
 export type SourcedText = z.infer<typeof SourcedTextSchema>;
 

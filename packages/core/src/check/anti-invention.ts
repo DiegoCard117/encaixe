@@ -11,8 +11,6 @@ export interface Violation {
   path: (string | number)[];
   /** O id, skill ou número problemático, como aparece. */
   value: string;
-  /** Mensagem curta em português para a UI. */
-  message: string;
 }
 
 const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -63,13 +61,13 @@ export function checkResumeDraft(bank: FactBank, draft: ResumeDraft): Violation[
     }
     return text;
   };
-  const add = (code: ViolationCode, path: Violation["path"], value: string, message: string) => {
-    violations.push({ code, path, value, message });
+  const add = (code: ViolationCode, path: Violation["path"], value: string) => {
+    violations.push({ code, path, value });
   };
   const checkId = (id: string, path: Violation["path"]): Fact | undefined => {
     const fact = byId.get(id);
-    if (!fact) add("unknown_fact", path, id, "Fato não encontrado no banco.");
-    else if (fact.archived) add("archived_fact", path, id, "Fato arquivado não pode ser citado.");
+    if (!fact) add("unknown_fact", path, id);
+    else if (fact.archived) add("archived_fact", path, id);
     else return fact;
     return undefined;
   };
@@ -80,7 +78,7 @@ export function checkResumeDraft(bank: FactBank, draft: ResumeDraft): Violation[
       const fact = checkId(id, sourcePath);
       if (!fact) return;
       if (contextId && id !== contextId && !("contextId" in fact && fact.contextId === contextId)) {
-        add("wrong_context", sourcePath, id, "Fato não pertence ao contexto deste bullet.");
+        add("wrong_context", sourcePath, id);
         return;
       }
       sources.push(fact);
@@ -108,12 +106,12 @@ export function checkResumeDraft(bank: FactBank, draft: ResumeDraft): Violation[
     for (const match of mentions(sourced.text)) {
       const skill = names.get(fold(match[0]));
       if (skill && !supportedSkills.has(skill.id)) {
-        add("unsupported_skill", [...path, "text"], match[0], "Habilidade sem apoio nos fatos citados.");
+        add("unsupported_skill", [...path, "text"], match[0]);
       }
     }
     for (const number of numbers(withoutSkills(sourced.text))) {
       if (!supportedNumbers.has(number.value)) {
-        add("unsupported_number", [...path, "text"], number.raw, "Número sem apoio nos fatos citados.");
+        add("unsupported_number", [...path, "text"], number.raw);
       }
     }
   };

@@ -25,17 +25,13 @@ const ID_BODY = "[a-z0-9][a-z0-9-]{2,63}";
 const ANY_PREFIX = Object.values(FACT_ID_PREFIX).join("|");
 
 /** Id de qualquer tipo de fato (usado em referências e citações). */
-export const FactIdSchema = z
-  .string()
-  .regex(new RegExp(`^(${ANY_PREFIX})_${ID_BODY}$`), "fact_id inválido (esperado ex.: exp_minha-empresa)");
+export const FactIdSchema = z.string().regex(new RegExp(`^(${ANY_PREFIX})_${ID_BODY}$`), "invalid_fact_id");
 export type FactId = z.infer<typeof FactIdSchema>;
 
 /** Id restrito a um tipo de fato (o prefixo precisa bater com o tipo). */
 export function factIdOf(kind: FactKind) {
   const prefix = FACT_ID_PREFIX[kind];
-  return z
-    .string()
-    .regex(new RegExp(`^${prefix}_${ID_BODY}$`), `fact_id de ${kind} deve começar com "${prefix}_"`);
+  return z.string().regex(new RegExp(`^${prefix}_${ID_BODY}$`), "fact_id_wrong_kind");
 }
 
 /** Descobre o tipo do fato pelo prefixo do id. */

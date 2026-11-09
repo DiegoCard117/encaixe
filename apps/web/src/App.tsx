@@ -241,7 +241,6 @@ export default function App() {
                           <p className="mt-2">
                             Valor: <span className="font-mono">{violation.value}</span>
                           </p>
-                          <p className="mt-1 text-slate-600">{violation.message}</p>
                         </li>
                       ))}
                     </ul>

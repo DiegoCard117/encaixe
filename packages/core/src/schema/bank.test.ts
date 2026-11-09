@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { sampleBank } from "../__fixtures__/fact-bank";
 import {
   FactBankSchema,
+  NonEmptyText,
   ResumeDraftSchema,
   createEmptyFactBank,
   createFactId,
@@ -17,9 +18,14 @@ function withFacts(mutate: (facts: FactBankInput["facts"]) => void): FactBankInp
   return bank;
 }
 
-function issues(input: unknown): string[] {
+function issues(input: unknown) {
   const result = FactBankSchema.safeParse(input);
-  return result.success ? [] : result.error.issues.map((i) => i.message);
+  return result.success
+    ? []
+    : result.error.issues.map((i) => ({
+        message: i.message,
+        params: i.code === "custom" ? i.params : undefined,
+      }));
 }
 
 describe("FactBankSchema", () => {
@@ -39,14 +45,14 @@ describe("FactBankSchema", () => {
 
   it("rejeita id duplicado", () => {
     const input = withFacts((facts) => facts.push({ ...facts[0]!, name: "Outro" } as never));
-    expect(issues(input)).toContain("id duplicado: skl_python");
+    expect(issues(input)).toContainEqual({ message: "duplicate_id", params: { id: "skl_python" } });
   });
 
   it("rejeita id com prefixo de outro tipo", () => {
     const input = withFacts((facts) => {
       facts.push({ id: "exp_errado", kind: "skill", name: "Go", category: "programming_language" });
     });
-    expect(issues(input).some((m) => m.includes('deve começar com "skl_"'))).toBe(true);
+    expect(issues(input)).toContainEqual({ message: "fact_id_wrong_kind", params: undefined });
   });
 
   it("rejeita skillId inexistente", () => {
@@ -54,7 +60,7 @@ describe("FactBankSchema", () => {
       const exp = facts.find((f) => f.id === "exp_coop-dev");
       if (exp?.kind === "experience") exp.skillIds = ["skl_java"];
     });
-    expect(issues(input)).toContain("referência inexistente: skl_java");
+    expect(issues(input)).toContainEqual({ message: "missing_reference", params: { id: "skl_java" } });
   });
 
   it("rejeita conquista com contexto de tipo errado", () => {
@@ -62,7 +68,10 @@ describe("FactBankSchema", () => {
       const ach = facts.find((f) => f.id === "ach_automacao-credito");
       if (ach?.kind === "achievement") ach.contextId = "skl_python";
     });
-    expect(issues(input).some((m) => m.startsWith("skl_python é skill"))).toBe(true);
+    expect(issues(input)).toContainEqual({
+      message: "wrong_reference_kind",
+      params: { id: "skl_python", actual: "skill", expected: ["experience", "project", "education"] },
+    });
   });
 
   it("rejeita período com fim antes do início", () => {
@@ -70,19 +79,32 @@ describe("FactBankSchema", () => {
       const exp = facts.find((f) => f.id === "exp_coop-dev");
       if (exp?.kind === "experience") exp.period = { start: "2024-03", end: "2023-01" };
     });
-    expect(issues(input)).toContain("fim não pode ser antes do início");
+    expect(issues(input)).toContainEqual({ message: "period_end_before_start", params: undefined });
   });
 
   it("rejeita apelido de skill ambíguo", () => {
     const input = withFacts((facts) => {
       facts.push({ id: "skl_pg", kind: "skill", name: "postgres", category: "database" });
     });
-    expect(issues(input).some((m) => m.includes("já usado por skl_postgresql"))).toBe(true);
+    expect(issues(input)).toContainEqual({
+      message: "ambiguous_skill_name",
+      params: { name: "postgres", owner: "skl_postgresql" },
+    });
   });
 
   it("indexa fatos por id", () => {
     const index = indexFacts(FactBankSchema.parse(sampleBank));
     expect(index.get("prj_balance")?.kind).toBe("project");
+  });
+});
+
+describe("NonEmptyText", () => {
+  it("retorna required para texto vazio", () => {
+    const result = NonEmptyText(120).safeParse("");
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual([expect.objectContaining({ message: "required" })]);
+    }
   });
 });
 
@@ -117,6 +139,14 @@ describe("ResumeDraftSchema", () => {
       experiences: [{ factId: "exp_coop-dev", bullets: [{ ...bullet, sourceFactIds: [] }] }],
     });
     expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual([
+        expect.objectContaining({
+          message: "source_required",
+          path: ["experiences", 0, "bullets", 0, "sourceFactIds"],
+        }),
+      ]);
+    }
   });
 
   it("rejeita referência de tipo errado (skill no lugar de experiência)", () => {
