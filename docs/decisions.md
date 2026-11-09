@@ -33,9 +33,19 @@ Mudou de ideia? Edite a linha e diga o motivo no commit.
 
 - **Público inicial: tecnologia**, com o schema genérico o bastante para outras áreas.
 
+## User flow do MVP
+
+Abrir o app → montar o banco de fatos → colar a vaga → ver a aderência → gerar com a LLM → revisar → exportar PDF.
+
+- **Sem conta nem login.** O banco remoto é só sincronização opcional, nunca barreira.
+- **Três entradas para o banco de fatos:** importar currículo antigo (a LLM extrai fatos e o usuário confirma cada um), carregar JSON ou começar do zero.
+- **Lacuna não vira invenção.** Skill da vaga que não está no banco aparece como lacuna; a única saída é cadastrar um fato real.
+- **Chave da LLM pedida só na primeira geração**, não no onboarding.
+- **PDF só sai com zero violações.** Para destravar: editar, remover o bullet ou regenerar.
+- Fora do MVP: histórico de candidaturas e múltiplos modelos de currículo.
+
 ## Em aberto
 
 - Qual banco/serviço usar na persistência opcional.
 - Provedor de LLM do MVP.
-- Importar currículo antigo / LinkedIn para gerar fatos (onboarding).
 - Identidade visual: logo, paleta, tipografia e tom de voz.
