@@ -1,5 +1,5 @@
 {
-  "name": "@repo/core",
+  "name": "@encaixe/core",
   "version": "0.0.0",
   "private": true,
   "description": "Lógica do gerador de currículos: schema, aderência, geração e checagem anti-invenção. Sem UI, disco ou rede.",

@@ -1,4 +1,4 @@
-# Criador de Currículo (nome provisório)
+# Encaixe
 
 Gera um currículo adaptado para cada vaga a partir de um **banco de fatos** seu — sem inventar nada.
 A ferramenta só seleciona, reordena e reescreve fatos reais; cada frase gerada cita o `fact_id` de onde veio,
