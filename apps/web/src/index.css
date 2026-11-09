@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply m-0 bg-slate-50 font-sans text-slate-900 antialiased;
+  }
+
+  button {
+    @apply cursor-pointer;
+  }
+
+  button:focus-visible,
+  textarea:focus-visible {
+    @apply outline-2 outline-offset-4 outline-teal-700;
+  }
+
+  mark {
+    @apply rounded bg-amber-200 px-0.5 text-slate-950;
+  }
+}
