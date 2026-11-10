@@ -10,6 +10,7 @@ import FactForm from "./FactForm";
 import ImportResume from "./ImportResume";
 import { useSync } from "../sync/useSync";
 import SyncCard from "../sync/SyncCard";
+import DangerZone from "./DangerZone";
 
 type Editing = { kind: "profile" } | { kind: FactKind; fact?: Fact; contextId?: string };
 export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => void }) {
@@ -331,6 +332,7 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
               </button>
             </section>
             <SyncCard sync={sync} />
+            <DangerZone bank={bank} />
           </aside>
           <div className="min-w-0 space-y-8">
             {(["experience", "project", "education", "skill"] as const).map((kind) => (

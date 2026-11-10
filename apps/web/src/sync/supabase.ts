@@ -217,6 +217,17 @@ export async function fetchRemote(): Promise<Remote> {
     throw syncError(error);
   }
 }
+/** Apaga o banco deste login no Supabase (a política RLS só deixa apagar o próprio). */
+export async function deleteRemote(): Promise<void> {
+  try {
+    const { client, user } = await userClient();
+    const { error } = await client.from("fact_banks").delete().eq("user_id", user.id);
+    if (error) throw error;
+  } catch (error) {
+    throw syncError(error);
+  }
+}
+
 export async function pushRemote(bank: FactBank): Promise<string> {
   try {
     const { client, user } = await userClient();

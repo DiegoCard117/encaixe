@@ -24,6 +24,7 @@ Mudou de ideia? Edite a linha e diga o motivo no commit.
 - **Local por padrão, sem conta e sem servidor:** o banco de fatos fica no navegador (localStorage) e pode ser exportado/importado em JSON.
 - **Banco de dados opcional, no Supabase.** Quem quiser pode ligar um banco para persistir e sincronizar entre dispositivos (cada pessoa liga o próprio projeto Supabase; o Encaixe não mantém servidor). O app nunca exige isso: tudo funciona sem banco.
 - **Como a sincronização funciona:** o navegador continua sendo a fonte da tela; o SDK do Supabase só é baixado por quem conecta. Login por link mágico (PKCE), tabela `fact_banks` com RLS (cada login vê só o próprio banco, [docs/supabase.sql](supabase.sql)). Decisão em três vias contra a última sincronização: só um lado mudou → copia; os dois mudaram → pergunta qual manter. Remoto inválido nunca sobrescreve o local. Chave secreta (`service_role`, `sb_secret_`) é recusada.
+- **Zona de perigo:** "Apagar tudo deste navegador" remove dados do app (`encaixe.*`, exceto tema e idioma) e a sessão do Supabase, com confirmação digitando APAGAR e oferta de exportar antes. Apagar também o banco no Supabase é opcional e desmarcado; se a exclusão remota falhar, nada local é apagado.
 - O formato persistido é sempre o `FactBank` validado pelo `FactBankSchema`, seja no navegador, no JSON ou no banco.
 
 ## Interface
