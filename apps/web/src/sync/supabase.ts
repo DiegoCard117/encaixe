@@ -15,7 +15,11 @@ export type SyncErrorCode =
   | "storage"
   | "invalid_local";
 export class SyncError extends Error {
-  constructor(public code: SyncErrorCode) {
+  constructor(
+    public code: SyncErrorCode,
+    /** Mensagem original do Supabase, para a pessoa (e o suporte) saberem a causa. */
+    public detail?: string,
+  ) {
     super(code);
   }
 }
@@ -115,25 +119,30 @@ export function syncError(error: unknown): SyncError {
   if (error instanceof SyncError) return error;
   const value = error as { code?: string; status?: number; message?: string; name?: string } | null;
   const message = value?.message ?? "";
+  const detail =
+    [value?.code, value?.status, message]
+      .filter((part) => part !== undefined && part !== "")
+      .join(" · ")
+      .slice(0, 300) || undefined;
   if (
     ["42P01", "PGRST205"].includes(value?.code ?? "") ||
     /relation .* does not exist|could not find .*fact_banks/i.test(message)
   )
-    return new SyncError("table_missing");
+    return new SyncError("table_missing", detail);
   if (
     error instanceof TypeError ||
     /fetch|network|failed to load/i.test(message) ||
     value?.name === "AuthRetryableFetchError"
   )
-    return new SyncError("network");
+    return new SyncError("network", detail);
   if (
     value?.status === 401 ||
     value?.status === 403 ||
     value?.code === "42501" ||
     /Auth.*Error/.test(value?.name ?? "")
   )
-    return new SyncError("auth");
-  return new SyncError("api");
+    return new SyncError("auth", detail);
+  return new SyncError("api", detail);
 }
 
 let cached: { id: string; client: Promise<SupabaseClient> } | undefined;

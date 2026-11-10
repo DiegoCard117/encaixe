@@ -6,3 +6,6 @@ create table if not exists public.fact_banks (
 alter table public.fact_banks enable row level security;
 create policy "cada pessoa vê e altera só o próprio banco" on public.fact_banks
   for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Projetos novos não dão permissão automática às tabelas criadas pelo SQL Editor.
+grant select, insert, update, delete on table public.fact_banks to authenticated;

@@ -27,7 +27,12 @@ export type SyncState =
   | { status: "off" | "signed_out" | "syncing" }
   | { status: "idle"; email: string; syncedAt?: string }
   | { status: "conflict"; local: Summary; remote: Summary }
-  | { status: "error"; code: SyncErrorCode };
+  | { status: "error"; code: SyncErrorCode; detail?: string };
+
+const pickError = (error: unknown) => {
+  const { code, detail } = syncError(error);
+  return detail ? { code, detail } : { code };
+};
 
 export function useSync(onPulled: (bank: FactBank) => void) {
   const [config, setConfig] = useState(loadSyncConfig);
@@ -107,7 +112,7 @@ export function useSync(onPulled: (bank: FactBank) => void) {
       conflict.current = undefined;
       setState({ status: "idle", email, syncedAt: new Date().toISOString() });
     } catch (error) {
-      if (active.current) setState({ status: "error", code: syncError(error).code });
+      if (active.current) setState({ status: "error", ...pickError(error) });
     } finally {
       locked.current = false;
       if (pending.current && active.current) {
@@ -148,7 +153,7 @@ export function useSync(onPulled: (bank: FactBank) => void) {
           unsubscribe = () => data.subscription.unsubscribe();
         })
         .catch((error) => {
-          if (!disposed) setState({ status: "error", code: syncError(error).code });
+          if (!disposed) setState({ status: "error", ...pickError(error) });
         });
     }
     return () => {
@@ -187,7 +192,7 @@ export function useSync(onPulled: (bank: FactBank) => void) {
       }
       setState({ status: remove ? "off" : "signed_out" });
     } catch (error) {
-      setState({ status: "error", code: syncError(error).code });
+      setState({ status: "error", ...pickError(error) });
     } finally {
       locked.current = false;
     }
@@ -205,7 +210,7 @@ export function useSync(onPulled: (bank: FactBank) => void) {
         setConfig(settings);
         return true;
       } catch (error) {
-        setState({ status: "error", code: syncError(error).code });
+        setState({ status: "error", ...pickError(error) });
         return false;
       }
     },
@@ -214,7 +219,7 @@ export function useSync(onPulled: (bank: FactBank) => void) {
         await sendMagicLink(email);
         return true;
       } catch (error) {
-        setState({ status: "error", code: syncError(error).code });
+        setState({ status: "error", ...pickError(error) });
         return false;
       }
     },
@@ -224,7 +229,7 @@ export function useSync(onPulled: (bank: FactBank) => void) {
         await sync();
         return true;
       } catch (error) {
-        setState({ status: "error", code: syncError(error).code });
+        setState({ status: "error", ...pickError(error) });
         return false;
       }
     },

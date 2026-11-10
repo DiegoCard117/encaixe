@@ -155,9 +155,14 @@ export default function SyncCard({ sync }: { sync: ReturnType<typeof useSync> })
       )}
       {state.status === "error" && (
         <>
-          <p role="alert" className="bank-errors">
-            {t(`sync.error.${state.code}`)}
-          </p>
+          <div role="alert" className="bank-errors">
+            <p>{t(`sync.error.${state.code}`)}</p>
+            {state.detail && (
+              <p className="break-words font-mono text-xs">
+                {t("sync.detail")} {state.detail}
+              </p>
+            )}
+          </div>
           <button type="button" className="bank-button" onClick={() => void sync.sync()}>
             {t("sync.retry")}
           </button>

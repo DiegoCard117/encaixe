@@ -4,7 +4,9 @@ O banco local continua sendo o padrão. Para sincronizar entre dispositivos, use
 
 1. Crie um projeto gratuito em [Supabase](https://supabase.com/).
 2. Abra o **SQL Editor**, cole o conteúdo de [supabase.sql](./supabase.sql) e execute.
-3. Em **Authentication → URL Configuration → Redirect URLs**, adicione a URL do app: `https://diegocard117.github.io/encaixe/`. Para desenvolvimento, adicione também `http://localhost:5173/`.
+3. Em **Authentication → URL Configuration**:
+   - **Site URL**: troque o padrão (`http://localhost:3000`) por `https://diegocard117.github.io/encaixe/`. Sem isso, o link do e-mail leva para o localhost.
+   - **Redirect URLs**: adicione `https://diegocard117.github.io/encaixe/**` e, para desenvolvimento, `http://localhost:5173/**`.
 4. Para entrar também pelo celular (onde o link costuma abrir no navegador do app de e-mail), inclua o código no e-mail: em **Authentication → Emails → Magic Link**, acrescente ao modelo a linha `Código: {{ .Token }}` e salve.
 5. Em **Project Settings → API**, copie **Project URL** e a chave pública **anon** ou **publishable**. Nunca use a chave secreta (`service_role` ou `sb_secret_`).
 6. No banco de fatos do app, abra **Configurações** (ou, num aparelho ainda sem banco, use o cartão na tela inicial) e clique em **Conectar Supabase**, informe a URL e a chave pública e salve.
