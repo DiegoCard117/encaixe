@@ -14,7 +14,8 @@ export function buildExtractionPrompt({ resumeText }: { resumeText: string }): L
   return {
     system: [
       "Transcribe only what is written; never infer, summarize into new claims, translate, or add skills, numbers, dates, companies or links that are not in the text. Keep the resume's original language.",
-      'Output ONLY JSON {"locale":"pt-BR"|"en","profile":{...},"facts":[...]}, without markdown or commentary.',
+      "If the text is a job posting, job description or anything other than a person's own resume/profile (e.g. it lists requirements, 'nice to have', benefits, work model, 'we are looking for'), do not extract facts: respond only {\"notResume\": true}.",
+      'For a resume/profile, output ONLY JSON {"locale":"pt-BR"|"en","profile":{...},"facts":[...]}, without markdown or commentary.',
       'Profile: fullName (required, 1–120 chars), headline? (max 120), email? (valid email), phone? (max 30), location? (max 80), links: [{label (1–40),url (valid URL)}] (max 10). Example: {"fullName":"Ana Silva","links":[]}. Omit missing optional fields; never invent required values: omit a fact that cannot meet its required fields.',
       "Each fact has kind, a unique id with its kind's prefix (exp_, prj_, ach_, skl_, edu_) plus 3–64 lowercase [a-z0-9-] characters starting with a letter or digit, e.g. exp_001. Optional common fields: tags (max 30 unique lowercase strings, 1–40 chars), archived (false). skillIds defaults to [].",
       'experience: company and role (required, 1–120 chars), period (required), summary? (max 600), location? (max 80), employmentType? (employee|contractor|internship|freelance|volunteer|other), workMode? (onsite|hybrid|remote), skillIds. Example: {"id":"exp_001","kind":"experience","company":"Acme","role":"Sales assistant","period":{"start":"2020-01","end":null}}.',
@@ -222,10 +223,12 @@ export function parseExtraction(
   raw: string,
 ):
   | { ok: true; extraction: Extraction; dropped: number; droppedItems: DroppedItem[] }
-  | { ok: false; error: "invalid_json" | "invalid_schema" } {
+  | { ok: false; error: "invalid_json" | "invalid_schema" | "not_resume" } {
   const json = parseJsonResponse(raw);
   if (!json.ok) return { ok: false, error: "invalid_json" };
   const value = json.value;
+  if (value && typeof value === "object" && "notResume" in value && value.notResume === true)
+    return { ok: false, error: "not_resume" };
   if (
     !value ||
     typeof value !== "object" ||

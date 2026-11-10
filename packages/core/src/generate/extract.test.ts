@@ -41,6 +41,12 @@ const extraction: Extraction = {
 };
 
 describe("buildExtractionPrompt", () => {
+  it("orienta a rejeitar vagas sem extrair fatos", () => {
+    const { system } = buildExtractionPrompt({ resumeText: "We are looking for a developer" });
+    expect(system).toContain("If the text is a job posting, job description");
+    expect(system).toContain('do not extract facts: respond only {"notResume": true}');
+  });
+
   it("extrai níveis de idioma declarados sem inferir proficiência", () => {
     const { system } = buildExtractionPrompt({ resumeText: "Português nativo; inglês profissional" });
     for (const rule of [
@@ -66,6 +72,15 @@ describe("buildExtractionPrompt", () => {
 });
 
 describe("parseExtraction", () => {
+  it("rejeita texto identificado como vaga antes de validar ou extrair fatos", () => {
+    for (const value of [{ notResume: true }, { ...extraction, notResume: true }]) {
+      expect(parseExtraction(JSON.stringify(value))).toEqual({ ok: false, error: "not_resume" });
+    }
+    for (const notResume of [false, "true", 1]) {
+      expect(parseExtraction(JSON.stringify({ ...extraction, notResume })).ok).toBe(true);
+    }
+  });
+
   it("aceita cerca json", () => {
     expect(parseExtraction(`\`\`\`json\n${JSON.stringify(extraction)}\n\`\`\``)).toEqual({
       ok: true,

@@ -151,6 +151,7 @@ export default function ImportResume({
   }, [text, sourceText, extraction, dropped, droppedItems, statuses, profileStatus, hasEdits]);
   const [editing, setEditing] = useState<Fact | "profile">();
   const [errors, setErrors] = useState<string[]>([]);
+  const [notResume, setNotResume] = useState(false);
   const busy = llm.busy || reading;
 
   async function readFile(event: ChangeEvent<HTMLInputElement>) {
@@ -159,6 +160,7 @@ export default function ImportResume({
     if (!file) return;
     setReading(true);
     setErrors([]);
+    setNotResume(false);
     llm.setError(undefined);
     try {
       let content: string;
@@ -201,25 +203,43 @@ export default function ImportResume({
   function extract() {
     if (busy || !text.trim()) return;
     setErrors([]);
-    llm.run(async (callLlm) => {
-      const raw = await callLlm(buildExtractionPrompt({ resumeText: text }));
-      const parsed = parseExtraction(raw);
-      if (!parsed.ok) {
-        const failure = describeParseError(parsed.error, raw, t);
-        // O JSON veio, mas sem o essencial: o nome no perfil ou a lista de fatos.
-        if (parsed.error === "invalid_schema") llm.setError("import.invalidSchema", failure.detail);
-        else llm.setError(failure.key, failure.detail);
-        return;
-      }
-      const merged = mergeExtraction(bank, parsed.extraction);
-      setExtraction(merged);
-      setSourceText(text);
-      setDropped(parsed.dropped);
-      setDroppedItems(parsed.droppedItems);
-      setStatuses(Object.fromEntries(merged.facts.map((fact) => [fact.id, "pending"])));
-      setProfileStatus("pending");
-      setHasEdits(false);
-    });
+    setNotResume(false);
+    llm.run(
+      async (callLlm) => {
+        setNotResume(false);
+        const raw = await callLlm(buildExtractionPrompt({ resumeText: text }));
+        const parsed = parseExtraction(raw);
+        if (!parsed.ok) {
+          if (parsed.error === "not_resume") {
+            setNotResume(true);
+            return;
+          }
+          const failure = describeParseError(parsed.error, raw, t);
+          // O JSON veio, mas sem o essencial: o nome no perfil ou a lista de fatos.
+          if (parsed.error === "invalid_schema") llm.setError("import.invalidSchema", failure.detail);
+          else llm.setError(failure.key, failure.detail);
+          return;
+        }
+        const merged = mergeExtraction(bank, parsed.extraction);
+        setExtraction(merged);
+        setSourceText(text);
+        setDropped(parsed.dropped);
+        setDroppedItems(parsed.droppedItems);
+        setStatuses(Object.fromEntries(merged.facts.map((fact) => [fact.id, "pending"])));
+        setProfileStatus("pending");
+        setHasEdits(false);
+      },
+      {
+        phrases: [
+          "import.progress.reading",
+          "import.progress.separating",
+          "import.progress.dates",
+          "import.progress.skills",
+          "import.progress.review",
+          "generation.progress.local",
+        ],
+      },
+    );
   }
 
   const facts = extraction?.facts ?? [];
@@ -502,7 +522,10 @@ export default function ImportResume({
               rows={14}
               value={text}
               disabled={busy}
-              onChange={(event) => setText(event.target.value)}
+              onChange={(event) => {
+                setText(event.target.value);
+                setNotResume(false);
+              }}
             />
           </label>
           <input
@@ -537,6 +560,14 @@ export default function ImportResume({
             </button>
             {llm.controls}
           </div>
+          {notResume && (
+            <div role="alert" className="bank-errors">
+              <p>{t("import.notResume")}</p>
+              <a href="#/vaga" className="bank-button" onClick={onClose}>
+                {t("editor.step2")}
+              </a>
+            </div>
+          )}
         </div>
       ) : (
         <div className="min-w-0 space-y-5">

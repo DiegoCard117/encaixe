@@ -312,6 +312,14 @@ function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSe
 export function useLlmTask() {
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
+  const [phrases, setPhrases] = useState<TranslationKey[]>([]);
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!busy) return;
+    const started = Date.now();
+    const timer = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(timer);
+  }, [busy]);
   const locked = useRef(false);
   const controller = useRef<AbortController | undefined>(undefined);
   useEffect(
@@ -339,6 +347,7 @@ export function useLlmTask() {
     locked.current = true;
     const execution = new AbortController();
     controller.current = execution;
+    setElapsed(0);
     setBusy(true);
     setError(undefined);
     setModelStatus(undefined);
@@ -365,9 +374,10 @@ export function useLlmTask() {
       }
     }
   }
-  function run(task: (callLlm: CallLlm) => Promise<void>) {
+  function run(task: (callLlm: CallLlm) => Promise<void>, options?: { phrases?: TranslationKey[] }) {
     if (locked.current || dialog) return;
     lastTask.current = task;
+    setPhrases(options?.phrases ?? []);
     const settings = loadLlmSettings() ?? settingsRef.current;
     if (settings) void execute(settings, task);
     else setDialog("generate");
@@ -403,9 +413,24 @@ export function useLlmTask() {
           {t("llm.configure")}
         </button>
         {busy && (
-          <button type="button" className="bank-button min-h-10" onClick={() => controller.current?.abort()}>
-            {t("editor.cancel")}
-          </button>
+          <>
+            <div role="status" aria-live="polite" className="flex w-full items-center gap-2 text-sm">
+              <span className="llm-progress-indicator" aria-hidden="true" />
+              <span>
+                {t(phrases[Math.min(Math.floor(elapsed / 4), phrases.length - 1)] ?? "generation.waiting")}
+              </span>
+              <span aria-hidden="true" className="shrink-0 tabular-nums text-muted">
+                {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")}
+              </span>
+            </div>
+            <button
+              type="button"
+              className="bank-button min-h-10"
+              onClick={() => controller.current?.abort()}
+            >
+              {t("editor.cancel")}
+            </button>
+          </>
         )}
         {error && (
           <div role="alert" className="bank-errors w-full">
@@ -416,7 +441,7 @@ export function useLlmTask() {
               className="bank-button min-h-10"
               disabled={busy || !lastTask.current}
               onClick={() => {
-                if (lastTask.current) run(lastTask.current);
+                if (lastTask.current) run(lastTask.current, { phrases });
               }}
             >
               {t("generation.retry")}
@@ -467,24 +492,36 @@ export function useGeneration(
   const { t } = useI18n();
   const task = useLlmTask();
   function generate() {
-    task.run(async (callLlm) => {
-      let raw = "";
-      const { result } = await generateResumeDraft(
-        { bank, jobText, fit: analyzeFit(bank, jobText), locale },
-        async (messages) => (raw = await callLlm(messages)),
-      );
-      if (!result.ok) {
-        const failure = describeParseError(result.error, raw, t);
-        task.setError(failure.key, failure.detail);
-        return;
-      }
-      const value = { draft: result.draft, jobText, locale };
-      if (!saveDraft(value)) {
-        task.setError("generation.storage");
-        return;
-      }
-      onSuccess(value);
-    });
+    task.run(
+      async (callLlm) => {
+        let raw = "";
+        const { result } = await generateResumeDraft(
+          { bank, jobText, fit: analyzeFit(bank, jobText), locale },
+          async (messages) => (raw = await callLlm(messages)),
+        );
+        if (!result.ok) {
+          const failure = describeParseError(result.error, raw, t);
+          task.setError(failure.key, failure.detail);
+          return;
+        }
+        const value = { draft: result.draft, jobText, locale };
+        if (!saveDraft(value)) {
+          task.setError("generation.storage");
+          return;
+        }
+        onSuccess(value);
+      },
+      {
+        phrases: [
+          "generation.progress.reading",
+          "generation.progress.selecting",
+          "generation.progress.writing",
+          "generation.progress.adjusting",
+          "generation.progress.checking",
+          "generation.progress.local",
+        ],
+      },
+    );
   }
   return { busy: task.busy, generate, controls: task.controls };
 }

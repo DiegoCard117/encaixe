@@ -105,6 +105,28 @@
   }
 }
 
+.llm-progress-indicator {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  border: 2px solid var(--accent);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: llm-progress-spin 0.9s linear infinite;
+}
+
+@keyframes llm-progress-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .llm-progress-indicator {
+    animation: none;
+  }
+}
+
 /* Janela aberta: a página de trás não rola. */
 html:has(dialog[open]) {
   overflow: hidden;
