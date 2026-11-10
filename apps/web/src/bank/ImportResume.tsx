@@ -16,7 +16,7 @@ import {
   type SkillFact,
 } from "@encaixe/core";
 import { describeParseError, useLlmTask } from "../generation";
-import { useI18n } from "../i18n";
+import { isTranslationKey, useI18n, type TranslationKey } from "../i18n";
 import FactForm from "./FactForm";
 import ProfileForm from "./ProfileForm";
 import { Errors, factTitle, Modal } from "./ui";
@@ -597,7 +597,11 @@ export default function ImportResume({
                     {droppedItems.map((item, index) => (
                       <li key={index} className="break-words">
                         {item.title ?? t("import.droppedUntitled")} —{" "}
-                        {t(item.reason === "orphan" ? "import.droppedOrphan" : "import.droppedInvalid")}
+                        {item.reason === "orphan"
+                          ? t("import.droppedOrphan")
+                          : item.field && item.problem
+                            ? `${isTranslationKey(`field.${item.field}`) ? t(`field.${item.field}` as TranslationKey) : item.field}: ${t(`import.problem.${item.problem}`)}`
+                            : t("import.droppedInvalid")}
                       </li>
                     ))}
                   </ul>

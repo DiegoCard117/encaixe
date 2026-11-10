@@ -364,3 +364,55 @@ describe("parseExtraction tolerante com dados reais de currículo", () => {
     });
   });
 });
+
+describe("parseExtraction com textos longos (caso real: projeto Encaixe)", () => {
+  const bullets = Array.from(
+    { length: 9 },
+    (_, i) =>
+      `• Tópico ${i + 1} do projeto, descrevendo uma parte real do trabalho feito, com stack, decisões e resultados concretos.`,
+  ).join("\n");
+
+  it("divide a descrição longa em descrição curta + conquistas, sem perder texto", () => {
+    const longDescription = bullets;
+    expect(longDescription.length).toBeGreaterThan(1000);
+    const parsed = parseExtraction(
+      JSON.stringify({
+        ...extraction,
+        facts: [{ id: "prj_001", kind: "project", name: "Encaixe", description: longDescription }],
+      }),
+    );
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.dropped).toBe(0);
+    const project = parsed.extraction.facts.find((fact) => fact.kind === "project")!;
+    const achievements = parsed.extraction.facts.filter((fact) => fact.kind === "achievement");
+    expect(project).toMatchObject({ name: "Encaixe", description: expect.stringContaining("Tópico 1") });
+    expect(achievements.map((fact) => fact.kind === "achievement" && fact.text.slice(0, 8))).toEqual(
+      Array.from({ length: 8 }, (_, i) => `Tópico ${i + 2}`),
+    );
+    expect(achievements.every((fact) => fact.kind === "achievement" && fact.contextId === project.id)).toBe(
+      true,
+    );
+  });
+
+  it("diz o campo e o problema do item ignorado", () => {
+    const parsed = parseExtraction(
+      JSON.stringify({
+        ...extraction,
+        facts: [{ id: "prj_001", kind: "project", name: "Sem descrição" }],
+      }),
+    );
+    expect(parsed).toMatchObject({
+      ok: true,
+      droppedItems: [
+        {
+          kind: "project",
+          title: "Sem descrição",
+          reason: "invalid",
+          field: "description",
+          problem: "missing",
+        },
+      ],
+    });
+  });
+});
