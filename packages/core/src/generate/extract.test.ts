@@ -212,3 +212,52 @@ describe("checkExtractedFact", () => {
     ]);
   });
 });
+
+describe("parseExtraction tolerante com dados reais de currículo", () => {
+  it("corrige links sem protocolo e descarta campos opcionais inválidos", () => {
+    const raw = JSON.stringify({
+      locale: "pt-BR",
+      profile: {
+        fullName: "Diego Cardoso",
+        email: "nao-e-email",
+        links: [
+          { label: "LinkedIn", url: "linkedin.com/in/diego" },
+          { label: "GitHub", url: "github.com/DiegoCard117" },
+          { label: "Quebrado", url: "nada aqui" },
+        ],
+      },
+      facts: [
+        {
+          id: "prj_001",
+          kind: "project",
+          name: "Balance",
+          description: "App de investimentos",
+          url: "balanceinvest.app",
+        },
+        { id: "prj_002", kind: "project", name: "Outro", description: "Sem URL válida", url: "não é url" },
+      ],
+    });
+    const parsed = parseExtraction(raw);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.extraction.profile).toMatchObject({
+      fullName: "Diego Cardoso",
+      links: [
+        { label: "LinkedIn", url: "https://linkedin.com/in/diego" },
+        { label: "GitHub", url: "https://github.com/DiegoCard117" },
+      ],
+    });
+    expect(parsed.extraction.profile.email).toBeUndefined();
+    expect(parsed.extraction.facts).toHaveLength(2);
+    expect(parsed.extraction.facts[0]).toMatchObject({ url: "https://balanceinvest.app" });
+    expect(parsed.extraction.facts[1]).not.toHaveProperty("url");
+    expect(parsed.dropped).toBe(0);
+  });
+
+  it("ainda exige o nome no perfil", () => {
+    expect(parseExtraction(JSON.stringify({ profile: { links: [] }, facts: [] }))).toEqual({
+      ok: false,
+      error: "invalid_schema",
+    });
+  });
+});

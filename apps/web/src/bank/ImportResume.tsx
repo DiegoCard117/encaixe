@@ -191,7 +191,9 @@ export default function ImportResume({
       const parsed = parseExtraction(raw);
       if (!parsed.ok) {
         const failure = describeParseError(parsed.error, raw, t);
-        llm.setError(failure.key, failure.detail);
+        // O JSON veio, mas sem o essencial: o nome no perfil ou a lista de fatos.
+        if (parsed.error === "invalid_schema") llm.setError("import.invalidSchema", failure.detail);
+        else llm.setError(failure.key, failure.detail);
         return;
       }
       const merged = mergeExtraction(bank, parsed.extraction);
