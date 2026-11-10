@@ -10,6 +10,8 @@ import { resumePresent, useI18n } from "../i18n";
 import { highlight } from "../highlight";
 import { describePath } from "../paths";
 import { loadDraft, saveDraft, useGeneration, type SavedDraft } from "../generation";
+import SupportDialog from "../SupportDialog";
+import { hasSupport } from "../support";
 
 function EditableText({
   text,
@@ -109,6 +111,8 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
   const { t, locale: uiLocale, tViolation } = useI18n();
   const [saved, setSaved] = useState(initial);
   const [storageError, setStorageError] = useState(false);
+  const [exported, setExported] = useState(false);
+  const [supporting, setSupporting] = useState(false);
   const { draft, locale, jobText } = saved;
   const generation = useGeneration(bank, jobText, locale, (value) => {
     setSaved(value);
@@ -129,6 +133,7 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
     document.title = t("review.pdfFilename", { name: resume.profile.fullName });
     try {
       window.print();
+      setExported(true);
     } catch (error) {
       restoreTitle();
       throw error;
@@ -193,6 +198,19 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
         <p id="pdf-help" className="text-sm text-muted">
           {t(violations.length ? "review.pdfBlocked" : "review.pdfHelp")}
         </p>
+        {exported && hasSupport && (
+          <p className="w-full text-sm text-muted">
+            {t("review.supportAsk")}{" "}
+            <button
+              type="button"
+              className="min-h-10 underline underline-offset-4"
+              onClick={() => setSupporting(true)}
+            >
+              {t("support.open")}
+            </button>
+          </p>
+        )}
+        {supporting && <SupportDialog onClose={() => setSupporting(false)} />}
         {generation.controls}
       </div>
       {storageError && (

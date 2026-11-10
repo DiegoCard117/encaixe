@@ -17,6 +17,7 @@ Mudou de ideia? Edite a linha e diga o motivo no commit.
 - **Toda chamada à LLM tem tempo limite de 5 minutos e pode ser cancelada.** Modelo local lento ou servidor travado não prende a tela.
 - **Aderência fato × vaga determinística** (termos, skills e tags), sem embeddings: explicável, offline e testável.
 - **Sem telemetria.**
+- **Apoio discreto: Pix (chave aleatória) e GitHub Sponsors.** Pix para quem usa no Brasil, Sponsors para quem chega pelo GitHub e de fora. No app só um link no rodapé e uma linha depois de exportar o PDF, nunca pop-up nem pedido antes de entregar valor. Dados em `apps/web/src/support.ts`; vazio esconde.
 
 ## Persistência
 

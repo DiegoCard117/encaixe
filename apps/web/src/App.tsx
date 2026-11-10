@@ -6,12 +6,15 @@ import BankEditor from "./bank/BankEditor";
 import { loadBank } from "./bank/storage";
 import JobStep from "./job/JobStep";
 import ReviewStep from "./review/ReviewStep";
+import SupportDialog from "./SupportDialog";
+import { hasSupport } from "./support";
 
 export default function App() {
   const { locale, setLocale, t } = useI18n();
   const [theme, setThemePref] = useState<ThemePref>(readTheme);
   const [hash, setHash] = useState(() => location.hash);
   const [saved, setSaved] = useState(() => loadBank().status === "ok");
+  const [supporting, setSupporting] = useState(false);
   const stored = loadBank();
   const bank = stored.status === "ok" ? stored.bank : undefined;
   const stepRoute = hash === "#/vaga" || hash === "#/revisao";
@@ -104,6 +107,26 @@ export default function App() {
       {hash === "#/playground" && <Playground />}
       {hash === "#/vaga" && bank && <JobStep bank={bank} />}
       {hash === "#/revisao" && bank && <ReviewStep bank={bank} />}
+      <footer className="mt-12 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-line pt-6 text-sm text-muted print:hidden">
+        <a
+          className="inline-flex min-h-10 items-center underline underline-offset-4"
+          href="https://github.com/DiegoCard117/encaixe"
+          target="_blank"
+          rel="noreferrer"
+        >
+          {t("footer.source")}
+        </a>
+        {hasSupport && (
+          <button
+            type="button"
+            className="min-h-10 underline underline-offset-4"
+            onClick={() => setSupporting(true)}
+          >
+            {t("support.open")}
+          </button>
+        )}
+      </footer>
+      {supporting && <SupportDialog onClose={() => setSupporting(false)} />}
     </main>
   );
 }

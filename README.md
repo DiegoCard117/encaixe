@@ -101,6 +101,15 @@ O app fica em http://localhost:5173. Veja setup, scripts e regras em [CONTRIBUTI
 
 Veja as decisões de produto e arquitetura em [docs/decisions.md](docs/decisions.md).
 
+## Apoie o Encaixe
+
+O Encaixe é gratuito e de código aberto. Se ele te ajudou, considere apoiar:
+
+- **Pix** (chave aleatória): `1ef18b8b-aa5f-42df-8bf4-19c16ba3b1dd`
+- **GitHub Sponsors**: em breve.
+
+No app, o link "Apoie o projeto" fica no rodapé.
+
 ## Licença
 
-MIT. Links de doação estão planejados.
+MIT.

@@ -100,6 +100,15 @@ The app runs at http://localhost:5173. See [CONTRIBUTING.md](CONTRIBUTING.md) fo
 
 Product and architecture decisions are recorded in [docs/decisions.md](docs/decisions.md), in Portuguese.
 
+## Support Encaixe
+
+Encaixe is free and open source. If it helped you, consider supporting it:
+
+- **Pix** (random key, Brazil only): `1ef18b8b-aa5f-42df-8bf4-19c16ba3b1dd`
+- **GitHub Sponsors**: coming soon.
+
+In the app, the "Support the project" link is in the footer.
+
 ## License
 
-MIT. Donation links are planned.
+MIT.
