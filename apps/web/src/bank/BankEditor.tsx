@@ -3,29 +3,18 @@ import { FactBankSchema, createEmptyFactBank, referencesTo, type Fact, type Fact
 import { sampleBank } from "@encaixe/core/fixtures";
 import { useI18n } from "../i18n";
 import { loadBank, saveBank } from "./storage";
-import { download, Errors, Modal } from "./ui";
+import { download, Errors, factTitle, Modal } from "./ui";
 import ProfileForm from "./ProfileForm";
 import FactForm from "./FactForm";
+import ImportResume from "./ImportResume";
 
 type Editing = { kind: "profile" } | { kind: FactKind; fact?: Fact; contextId?: string };
-function title(fact: Fact): string {
-  switch (fact.kind) {
-    case "experience":
-      return `${fact.role} · ${fact.company}`;
-    case "achievement":
-      return fact.text;
-    case "education":
-      return `${fact.title} · ${fact.institution}`;
-    default:
-      return fact.name;
-  }
-}
-
 export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => void }) {
   const { t, tIssue, locale } = useI18n();
   const [stored, setStored] = useState(loadBank);
   const bank = stored.status === "ok" ? stored.bank : undefined;
   const [editing, setEditing] = useState<Editing>();
+  const [importingResume, setImportingResume] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [saveFailed, setSaveFailed] = useState(false);
   const [blocked, setBlocked] = useState<string[]>([]);
@@ -102,7 +91,7 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
             </span>
           )}
         </div>
-        <h4 className="mt-2 break-words font-display font-medium">{title(fact)}</h4>
+        <h4 className="mt-2 break-words font-display font-medium">{factTitle(fact)}</h4>
         {"period" in fact && fact.period && (
           <p className="mt-2 text-sm text-muted">
             {new Intl.DateTimeFormat(locale, { month: "short", year: "numeric", timeZone: "UTC" }).format(
@@ -240,6 +229,9 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
             <button type="button" className="bank-button" onClick={() => input.current?.click()}>
               {t("editor.import")}
             </button>
+            <button type="button" className="bank-button" onClick={() => setImportingResume(true)}>
+              {t("import.title")}
+            </button>
           </div>
         )}
       </div>
@@ -256,7 +248,7 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
             {blocked.map((id) => (
               <li key={id}>
                 <span className="font-mono">{id}</span> ·{" "}
-                {bank?.facts.find((f) => f.id === id) && title(bank.facts.find((f) => f.id === id)!)}
+                {bank?.facts.find((f) => f.id === id) && factTitle(bank.facts.find((f) => f.id === id)!)}
               </li>
             ))}
           </ul>
@@ -286,8 +278,8 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
             <section className="bank-card flex flex-col gap-4">
               <h3 className="font-display text-lg">{t("editor.old")}</h3>
               <p className="flex-1 text-sm text-muted">{t("editor.oldHelp")}</p>
-              <button className="bank-button" type="button" disabled aria-disabled="true">
-                {t("editor.soon")}
+              <button className="bank-button" type="button" onClick={() => setImportingResume(true)}>
+                {t("import.title")}
               </button>
             </section>
           </div>
@@ -362,6 +354,9 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
             ))}
           </div>
         </div>
+      )}
+      {importingResume && (
+        <ImportResume bank={bank} onSave={commit} onClose={() => setImportingResume(false)} />
       )}
       {editing && (
         <Modal

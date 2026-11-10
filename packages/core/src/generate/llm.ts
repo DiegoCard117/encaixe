@@ -50,17 +50,20 @@ export type ParseResult =
   | { ok: true; draft: ResumeDraft }
   | { ok: false; error: "invalid_json" | "invalid_schema"; issues: z.core.$ZodIssue[] };
 
-export function parseResumeDraft(raw: string): ParseResult {
+export function parseJsonResponse(raw: string): { ok: true; value: unknown } | { ok: false } {
   const trimmed = raw.trim();
   const fenced = /^```(?:json)?\s*\n?([\s\S]*?)\s*```$/i.exec(trimmed);
-  let value: unknown;
   try {
-    value = JSON.parse(fenced ? fenced[1]! : trimmed);
+    return { ok: true, value: JSON.parse(fenced ? fenced[1]! : trimmed) };
   } catch {
-    return { ok: false, error: "invalid_json", issues: [] };
+    return { ok: false };
   }
+}
 
-  const parsed = ResumeDraftSchema.safeParse(value);
+export function parseResumeDraft(raw: string): ParseResult {
+  const json = parseJsonResponse(raw);
+  if (!json.ok) return { ok: false, error: "invalid_json", issues: [] };
+  const parsed = ResumeDraftSchema.safeParse(json.value);
   if (!parsed.success) {
     return { ok: false, error: "invalid_schema", issues: parsed.error.issues };
   }

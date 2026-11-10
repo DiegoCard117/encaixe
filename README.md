@@ -32,12 +32,13 @@ Em desenvolvimento. Acompanhe o [roadmap](https://github.com/users/DiegoCard117/
 - [x] Vaga e aderência, geração com a sua chave (Anthropic ou API compatível com OpenAI) e revisão das invenções
 - [x] Exportação em PDF pela impressão do navegador (liberada só com zero invenções)
 - [x] Publicação no GitHub Pages a cada push na `main`
-- [ ] Importação de currículo antigo
+- [x] Importação de currículo antigo (texto colado, PDF ou TXT): a LLM transcreve os fatos, o app aponta números e skills que
+      não estão no texto e cada fato só entra no banco depois de confirmado
 
 ## Estrutura
 
 ```
-packages/core   lógica pura: schema zod, checador anti-invenção, aderência, prompt/parsing da LLM e renderização — sem UI, disco ou rede
+packages/core   lógica pura: schema zod, checador anti-invenção, aderência, prompts/parsing da LLM (geração e extração) e renderização — sem UI, disco ou rede
 apps/web        interface principal, React + Vite + Tailwind, 100% no navegador
 apps/cli        casca fina sobre o core (depois da web)
 docs/           decisões de arquitetura, produto, user flow e identidade visual

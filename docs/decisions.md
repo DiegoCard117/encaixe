@@ -62,6 +62,7 @@ Abrir o app → montar o banco de fatos → colar a vaga → ver a aderência �
 
 - **Sem conta nem login.** O banco remoto é só sincronização opcional, nunca barreira.
 - **Três entradas para o banco de fatos:** importar currículo antigo (a LLM extrai fatos e o usuário confirma cada um), carregar JSON ou começar do zero.
+- **Importar currículo antigo:** texto colado, PDF ou TXT. O PDF é lido no navegador (`pdfjs-dist`, carregado só quando usado); PDF escaneado não tem texto e o app pede para colar. A LLM só transcreve para o formato do banco; o core descarta itens inválidos ou órfãos, troca os ids, reaproveita skills que já estão no banco e aponta números e skills que não aparecem no texto original. Nada entra sem confirmação, e itens com alerta não entram no "confirmar todos".
 - **Lacuna não vira invenção.** Skill da vaga que não está no banco aparece como lacuna; a única saída é cadastrar um fato real.
 - **Chave da LLM pedida só na primeira geração**, não no onboarding.
 - **PDF só sai com zero violações.** Para destravar: editar, remover o bullet ou regenerar.

@@ -5,6 +5,7 @@ import {
   ResumeDraftSchema,
   type FactBank,
   type ResumeDraft,
+  type CallLlm,
 } from "@encaixe/core";
 import { useI18n, type Locale, type TranslationKey } from "./i18n";
 import { Modal } from "./bank/ui";
@@ -226,38 +227,21 @@ function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSe
   );
 }
 
-export function useGeneration(
-  bank: FactBank,
-  jobText: string,
-  locale: Locale,
-  onSuccess: (value: SavedDraft) => void,
-) {
+export function useLlmTask() {
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const locked = useRef(false);
   const [error, setError] = useState<TranslationKey>();
   const [dialog, setDialog] = useState<"configure" | "generate">();
   const settingsRef = useRef<LlmSettings | undefined>(undefined);
-  async function run(settings: LlmSettings) {
+  const lastTask = useRef<((callLlm: CallLlm) => Promise<void>) | undefined>(undefined);
+  async function execute(settings: LlmSettings, task: (callLlm: CallLlm) => Promise<void>) {
     if (locked.current) return;
     locked.current = true;
     setBusy(true);
     setError(undefined);
     try {
-      const { result } = await generateResumeDraft(
-        { bank, jobText, fit: analyzeFit(bank, jobText), locale },
-        createCallLlm(settings),
-      );
-      if (!result.ok) {
-        setError(`generation.${result.error}`);
-        return;
-      }
-      const value = { draft: result.draft, jobText, locale };
-      if (!saveDraft(value)) {
-        setError("generation.storage");
-        return;
-      }
-      onSuccess(value);
+      await task(createCallLlm(settings));
     } catch (cause) {
       setError(cause instanceof LlmError ? `generation.${cause.code}` : "generation.api");
     } finally {
@@ -265,14 +249,18 @@ export function useGeneration(
       setBusy(false);
     }
   }
-  function generate() {
+  function run(task: (callLlm: CallLlm) => Promise<void>) {
+    if (locked.current || dialog) return;
+    lastTask.current = task;
     const settings = settingsRef.current ?? loadLlmSettings();
-    if (settings) void run(settings);
+    if (settings) void execute(settings, task);
     else setDialog("generate");
   }
   return {
     busy,
-    generate,
+    run,
+    error,
+    setError,
     controls: (
       <>
         <button
@@ -286,7 +274,14 @@ export function useGeneration(
         {error && (
           <div role="alert" className="bank-errors">
             <p>{t(error)}</p>
-            <button type="button" className="bank-button min-h-10" disabled={busy} onClick={generate}>
+            <button
+              type="button"
+              className="bank-button min-h-10"
+              disabled={busy || !lastTask.current}
+              onClick={() => {
+                if (lastTask.current) run(lastTask.current);
+              }}
+            >
               {t("generation.retry")}
             </button>
           </div>
@@ -301,11 +296,39 @@ export function useGeneration(
               settingsRef.current = settings;
               const shouldGenerate = dialog === "generate";
               setDialog(undefined);
-              if (shouldGenerate) void run(settings);
+              if (shouldGenerate && lastTask.current) void execute(settings, lastTask.current);
             }}
           />
         )}
       </>
     ),
   };
+}
+
+export function useGeneration(
+  bank: FactBank,
+  jobText: string,
+  locale: Locale,
+  onSuccess: (value: SavedDraft) => void,
+) {
+  const task = useLlmTask();
+  function generate() {
+    task.run(async (callLlm) => {
+      const { result } = await generateResumeDraft(
+        { bank, jobText, fit: analyzeFit(bank, jobText), locale },
+        callLlm,
+      );
+      if (!result.ok) {
+        task.setError(`generation.${result.error}`);
+        return;
+      }
+      const value = { draft: result.draft, jobText, locale };
+      if (!saveDraft(value)) {
+        task.setError("generation.storage");
+        return;
+      }
+      onSuccess(value);
+    });
+  }
+  return { busy: task.busy, generate, controls: task.controls };
 }

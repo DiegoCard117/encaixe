@@ -16,7 +16,7 @@ export interface Violation {
 
 const fold = (text: string) => text.toLocaleLowerCase("pt-BR");
 
-function textFields(value: unknown): string[] {
+export function textFields(value: unknown): string[] {
   if (typeof value === "string") return /^https?:\/\//i.test(value) ? [] : [value];
   if (Array.isArray(value)) return value.flatMap(textFields);
   if (!value || typeof value !== "object") return [];
@@ -30,7 +30,7 @@ function textFields(value: unknown): string[] {
  * Colado em letra antes ("ES2022", "v2") não conta; depois conta ("3x", "10k" precisam de fonte).
  * Algo que não vira número (ex.: versão "4.2.1") é comparado pelo texto bruto.
  */
-function numbers(text: string): { raw: string; value: string }[] {
+export function numbers(text: string): { raw: string; value: string }[] {
   // ponytail: números por extenso, como "três" ou "dobrou", não são detectados.
   return [...text.matchAll(/(?<![\p{L}\p{N}])\d+(?:[.,]\d+)*/gu)].map(([raw]) => {
     const normalized = /^\d{1,3}(?:[.,]\d{3})+$/.test(raw) ? raw.replace(/[.,]/g, "") : raw.replace(",", ".");
