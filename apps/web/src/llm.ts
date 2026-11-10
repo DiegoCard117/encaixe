@@ -269,7 +269,8 @@ export function createCallLlm(
   onModel?: (used: string, skipped: { model: string; code: LlmErrorCode }[]) => void,
 ): CallLlm {
   return async (messages) => {
-    const timeout = AbortSignal.timeout(300_000);
+    // Modelo local roda no PC da pessoa e "raciocina" antes de responder: 10 min; nuvem: 5 min.
+    const timeout = AbortSignal.timeout(isLocalBaseUrl(settings.baseUrl) ? 600_000 : 300_000);
     const combinedSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
     const checkAbort = () => {
       if (signal?.aborted) throw new LlmError("canceled");
@@ -370,9 +371,8 @@ function createModelCall(s: LlmSettings, combinedSignal: AbortSignal, checkAbort
           { role: "user", content: messages.user },
         ],
       };
-      // Modelo local (Ollama): desliga o "raciocínio" de modelos como o Qwen3. Ele gasta
-      // milhares de tokens antes do JSON e, numa placa de vídeo comum, estoura o tempo limite.
-      let noThink = isLocalBaseUrl(s.baseUrl);
+      // O "raciocínio" de modelos locais (ex.: Qwen3) fica LIGADO: medido com um currículo real,
+      // sem ele o qwen3:8b não extraiu nenhuma conquista; com ele, 14 em ~2 min numa RTX 3070.
       let jsonFormat = true;
       const request = () =>
         fetch(url, {
@@ -385,16 +385,12 @@ function createModelCall(s: LlmSettings, combinedSignal: AbortSignal, checkAbort
           body: JSON.stringify({
             ...body,
             ...(jsonFormat ? { response_format: { type: "json_object" } } : {}),
-            ...(noThink ? { reasoning_effort: "none" } : {}),
           }),
         });
       res = await request();
-      // ponytail: alguns modelos não aceitam response_format ou reasoning_effort; tenta uma vez sem cada um.
-      for (let retry = 0; retry < 2 && res.status === 400; retry++) {
-        const text = await res.clone().text();
-        if (noThink && /reasoning|think/i.test(text)) noThink = false;
-        else if (jsonFormat && text.includes("response_format")) jsonFormat = false;
-        else break;
+      if (res.status === 400 && (await res.clone().text()).includes("response_format")) {
+        // ponytail: alguns modelos não aceitam response_format; tentar só uma vez sem ele.
+        jsonFormat = false;
         res = await request();
       }
     } catch {

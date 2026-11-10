@@ -44,7 +44,15 @@ See the [sample fact bank in JSON](docs/exemplo-banco-de-fatos.json).
 - **Anthropic** (Claude) or **OpenAI**: paid per use. Generating a resume costs cents, depending on the model and text length.
 - **Free options**: Gemini, Groq and OpenRouter offer free tiers. Check their terms: free plans may use your data.
 - You don't need to know model names: after you paste your key, the app fetches the models your account can use and suggests one. If it is unavailable or overloaded, the app tries others from the list and tells you which one answered.
-- **Local**: run a model on your PC with **Ollama**. With a local provider, nothing is sent to an external service. In **Configure LLM**, choose **OpenAI-compatible** and the **Ollama** preset. Start Ollama with `OLLAMA_ORIGINS` set to the app's origin so it can accept requests. For the published app, use `https://diegocard117.github.io`.
+- **Local**: run a model on your PC with **Ollama**. With a local provider, nothing is sent to an external service. In **Configure LLM**, choose **OpenAI-compatible** and the **Ollama** preset. Start Ollama with `OLLAMA_ORIGINS` set to the app's origin so it can accept requests. For the published app, use `https://diegocard117.github.io`. A local model only works in that PC's browser, not on your phone.
+  - Tested on an 8 GB GPU (RTX 3070): `ollama pull qwen3:8b`, with a larger context and a smaller context cache so it fits entirely on the GPU. Extracting a real resume took about 2 minutes. In PowerShell, then restart Ollama:
+
+    ```powershell
+    setx OLLAMA_ORIGINS "https://diegocard117.github.io"
+    setx OLLAMA_CONTEXT_LENGTH 16384
+    setx OLLAMA_FLASH_ATTENTION 1
+    setx OLLAMA_KV_CACHE_TYPE q8_0
+    ```
 
 ## Privacy
 

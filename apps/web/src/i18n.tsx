@@ -67,7 +67,8 @@ const ptBR = {
   "page.playground": "Playground do checador",
   "page.review": "Revisão",
   "page.job": "Vaga e aderência",
-  "generation.timeout": "O provedor não respondeu em 5 minutos. Tente de novo ou use um modelo menor.",
+  "generation.timeout":
+    "O provedor não respondeu no tempo limite (5 minutos; 10 para modelo local). Tente de novo ou use um modelo menor.",
   "import.discardReview": "Descartar a revisão atual?",
   "import.savedReview": "A revisão fica salva neste navegador até você adicionar ao banco ou descartar.",
   "import.discardSavedReview": "Descartar revisão",
@@ -459,7 +460,8 @@ const en: Record<keyof typeof ptBR, string> = {
   "page.playground": "Checker playground",
   "page.review": "Review",
   "page.job": "Job and fit",
-  "generation.timeout": "The provider did not respond within 5 minutes. Try again or use a smaller model.",
+  "generation.timeout":
+    "The provider did not respond in time (5 minutes; 10 for a local model). Try again or use a smaller model.",
   "import.discardReview": "Discard the current review?",
   "import.savedReview": "Your review stays saved in this browser until you add it to the bank or discard it.",
   "import.discardSavedReview": "Discard review",
