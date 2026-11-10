@@ -70,10 +70,10 @@ export function Modal({
         if (!ref.current?.open) onClose();
       }}
       aria-labelledby={titleId}
-      className="bank-dialog"
-      style={wide ? { width: "min(70rem, calc(100vw - 2rem))", maxWidth: "70rem" } : undefined}
+      className={`bank-dialog ${wide ? "bank-dialog-wide" : ""}`}
     >
-      <div className="mb-5 flex items-center justify-between gap-4">
+      {/* Cabeçalho fixo: "Fechar" continua ao alcance em janelas longas, como a revisão da importação. */}
+      <div className="bank-dialog-header">
         <h2 id={titleId} className="font-display text-xl font-semibold">
           {title}
         </h2>

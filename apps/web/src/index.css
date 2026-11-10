@@ -99,6 +99,17 @@
   }
 }
 
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+/* Janela aberta: a página de trás não rola. */
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
 @layer components {
   .bank-button {
     @apply inline-flex min-h-10 items-center justify-center rounded-lg border border-line px-3 py-2 text-sm font-medium;
@@ -117,7 +128,26 @@
     @apply my-3 space-y-2 break-words rounded-lg border border-warn-line bg-warn-soft p-4 text-sm text-warn-ink;
   }
   .bank-dialog {
-    @apply m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-2xl overflow-y-auto rounded-xl border border-line bg-surface p-5 text-ink sm:p-7;
+    @apply m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-2xl overflow-y-auto overscroll-contain rounded-xl border border-line bg-surface p-5 text-ink sm:p-7;
+  }
+  .bank-dialog-wide {
+    @apply max-w-[70rem];
+  }
+  .bank-dialog-header {
+    @apply sticky -top-5 z-10 -mx-5 mb-5 flex items-center justify-between gap-4 bg-surface px-5 py-3 sm:-top-7 sm:-mx-7 sm:px-7;
+  }
+  /* Celular: painel que sobe da parte de baixo, como o teclado. */
+  @media (width < 40rem) {
+    .bank-dialog {
+      @apply mx-0 mt-auto mb-0 max-h-[92dvh] w-full max-w-none rounded-t-2xl rounded-b-none border-b-0;
+      padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+      animation: sheet-up 0.25s ease-out;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bank-dialog {
+      animation: none;
+    }
   }
   .bank-dialog::backdrop {
     background: color-mix(in srgb, var(--ink) 45%, transparent);

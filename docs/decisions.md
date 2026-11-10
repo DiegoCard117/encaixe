@@ -35,7 +35,7 @@ Mudou de ideia? Edite a linha e diga o motivo no commit.
 - **Vocabulário:** "skill" em pt-BR também, como no resto da área de tecnologia.
 - O idioma da interface e o do currículo gerado são independentes (`locale` do banco).
 - **Tema claro e escuro desde o início.** Cores só por tokens (variáveis CSS) com valor para cada tema; segue o sistema por padrão, com troca manual. A prévia do currículo é "papel" e continua clara no tema escuro, como o PDF.
-- **Celular primeiro-classe:** layout em uma coluna até 375px sem rolagem lateral, alvos de toque de 40px ou mais e campos com fonte de 16px no celular (abaixo disso o iOS dá zoom ao focar).
+- **Celular primeiro-classe:** layout em uma coluna até 375px sem rolagem lateral, alvos de toque de 40px ou mais e campos com fonte de 16px no celular (abaixo disso o iOS dá zoom ao focar). Janelas viram painel que sobe de baixo no celular, com cabeçalho fixo, e a página de trás não rola enquanto há janela aberta.
 - **Saída em PDF** pelo CSS de impressão, com um modelo legível por ATS no MVP.
 
 ## Identidade visual
