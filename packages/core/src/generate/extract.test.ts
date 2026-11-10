@@ -56,6 +56,7 @@ describe("parseExtraction", () => {
       ok: true,
       extraction,
       dropped: 0,
+      droppedItems: [],
     });
   });
 
@@ -66,7 +67,7 @@ describe("parseExtraction", () => {
     }
   });
 
-  it("descarta e conta fatos inválidos e ids duplicados; usa locale padrão", () => {
+  it("descarta e conta fatos inválidos, renomeia ids duplicados; usa locale padrão", () => {
     const parsed = parseExtraction(
       JSON.stringify({
         ...extraction,
@@ -74,10 +75,11 @@ describe("parseExtraction", () => {
         facts: [skill, { kind: "skill" }, skill],
       }),
     );
-    expect(parsed).toEqual({
+    expect(parsed).toMatchObject({
       ok: true,
-      extraction: { ...extraction, locale: "pt-BR", facts: [skill] },
-      dropped: 2,
+      extraction: { ...extraction, locale: "pt-BR", facts: [skill, { ...skill, id: "skl_001-2" }] },
+      dropped: 1,
+      droppedItems: [{ kind: "skill", reason: "invalid" }],
     });
     const { locale: _, ...withoutLocale } = extraction;
     const defaulted = parseExtraction(JSON.stringify(withoutLocale));
@@ -91,7 +93,7 @@ describe("parseExtraction", () => {
         facts: [achievement, project, { ...experience, period: undefined }, skill],
       }),
     );
-    expect(parsed).toEqual({ ok: true, extraction: { ...extraction, facts: [skill] }, dropped: 3 });
+    expect(parsed).toMatchObject({ ok: true, extraction: { ...extraction, facts: [skill] }, dropped: 3 });
   });
 
   it("descarta contextos de tipo não permitido", () => {
@@ -101,7 +103,7 @@ describe("parseExtraction", () => {
         facts: [{ ...project, contextId: skill.id }, { ...achievement, contextId: skill.id }, skill],
       }),
     );
-    expect(parsed).toEqual({ ok: true, extraction: { ...extraction, facts: [skill] }, dropped: 2 });
+    expect(parsed).toMatchObject({ ok: true, extraction: { ...extraction, facts: [skill] }, dropped: 2 });
   });
 
   it("remove skillIds órfãos sem descartar o fato", () => {
@@ -115,6 +117,77 @@ describe("parseExtraction", () => {
       ok: true,
       extraction: { ...extraction, facts: [{ ...experience, skillIds: [] }] },
       dropped: 0,
+      droppedItems: [],
+    });
+  });
+
+  it("caso real: dois cargos na mesma empresa com o mesmo id e ids fora do formato", () => {
+    const role = (title: string, start: string) => ({
+      id: "exp_sicoob-coopacredi",
+      kind: "experience",
+      company: "Sicoob Coopacredi",
+      role: title,
+      period: { start, end: null },
+    });
+    const parsed = parseExtraction(
+      JSON.stringify({
+        ...extraction,
+        facts: [
+          role("Desenvolvedor", "2026-05"),
+          {
+            id: "ach_1",
+            kind: "achievement",
+            contextId: "exp_sicoob-coopacredi",
+            text: "Desenvolve aplicações web",
+          },
+          role("Assistente de TI", "2024-10"),
+          {
+            id: "ach_2",
+            kind: "achievement",
+            contextId: "exp_sicoob-coopacredi",
+            text: "Administrou o Active Directory",
+          },
+          {
+            id: "Exp Santa Casa",
+            kind: "experience",
+            company: "Santa Casa",
+            role: "Auxiliar de TI",
+            period: { start: "2023-12", end: "2024-09" },
+          },
+          { id: "ach_3", kind: "achievement", contextId: "Exp Santa Casa", text: "Deu suporte ao ERP" },
+        ],
+      }),
+    );
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.dropped).toBe(0);
+    const facts = parsed.extraction.facts;
+    const byRole = (title: string) => facts.find((f) => f.kind === "experience" && f.role === title)!;
+    const parentOf = (text: string) => facts.find((f) => f.kind === "achievement" && f.text === text);
+    expect(new Set(facts.map((f) => f.id)).size).toBe(facts.length);
+    expect(parentOf("Desenvolve aplicações web")).toMatchObject({ contextId: byRole("Desenvolvedor").id });
+    expect(parentOf("Administrou o Active Directory")).toMatchObject({
+      contextId: byRole("Assistente de TI").id,
+    });
+    expect(parentOf("Deu suporte ao ERP")).toMatchObject({ contextId: byRole("Auxiliar de TI").id });
+  });
+
+  it("lista o título e o motivo de cada item ignorado", () => {
+    const parsed = parseExtraction(
+      JSON.stringify({
+        ...extraction,
+        facts: [
+          { id: "exp_x", kind: "experience", company: "Acme", role: "Dev" },
+          { id: "ach_x", kind: "achievement", contextId: "exp_x", text: "Fez algo" },
+        ],
+      }),
+    );
+    expect(parsed).toMatchObject({
+      ok: true,
+      droppedItems: [
+        { kind: "experience", title: "Dev · Acme", reason: "invalid" },
+        { kind: "achievement", title: "Fez algo", reason: "orphan" },
+      ],
     });
   });
 });

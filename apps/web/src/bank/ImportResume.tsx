@@ -9,6 +9,7 @@ import {
   parseExtraction,
   ProfileSchema,
   FactSchema,
+  type DroppedItem,
   type Extraction,
   type Fact,
   type FactBank,
@@ -26,6 +27,7 @@ type SavedReview = {
   sourceText: string;
   extraction: Extraction;
   dropped: number;
+  droppedItems: DroppedItem[];
   statuses: Record<string, Status>;
   profileStatus: Status;
   hasEdits: boolean;
@@ -85,6 +87,16 @@ function loadReview(): SavedReview | undefined {
       sourceText: value.sourceText,
       extraction: { profile: profile.data, facts, locale: value.extraction.locale },
       dropped: value.dropped,
+      // Revisões salvas antes desta versão não têm a lista.
+      droppedItems: Array.isArray(value.droppedItems)
+        ? value.droppedItems.filter(
+            (item: unknown): item is DroppedItem =>
+              !!item &&
+              typeof item === "object" &&
+              ((item as DroppedItem).reason === "invalid" || (item as DroppedItem).reason === "orphan") &&
+              ((item as DroppedItem).title === undefined || typeof (item as DroppedItem).title === "string"),
+          )
+        : [],
       statuses: value.statuses,
       profileStatus: value.profileStatus,
       hasEdits: value.hasEdits ?? false,
@@ -112,6 +124,7 @@ export default function ImportResume({
   const [reading, setReading] = useState(false);
   const [extraction, setExtraction] = useState<Extraction | undefined>(restored?.extraction);
   const [dropped, setDropped] = useState(restored?.dropped ?? 0);
+  const [droppedItems, setDroppedItems] = useState<DroppedItem[]>(restored?.droppedItems ?? []);
   const [statuses, setStatuses] = useState<Record<string, Status>>(restored?.statuses ?? {});
   const [profileStatus, setProfileStatus] = useState<Status>(restored?.profileStatus ?? "pending");
   const [hasEdits, setHasEdits] = useState(restored?.hasEdits ?? false);
@@ -126,6 +139,7 @@ export default function ImportResume({
           sourceText,
           extraction,
           dropped,
+          droppedItems,
           statuses,
           profileStatus,
           hasEdits,
@@ -134,7 +148,7 @@ export default function ImportResume({
     } catch {
       /* Review still works without storage. */
     }
-  }, [text, sourceText, extraction, dropped, statuses, profileStatus, hasEdits]);
+  }, [text, sourceText, extraction, dropped, droppedItems, statuses, profileStatus, hasEdits]);
   const [editing, setEditing] = useState<Fact | "profile">();
   const [errors, setErrors] = useState<string[]>([]);
   const busy = llm.busy || reading;
@@ -200,6 +214,7 @@ export default function ImportResume({
       setExtraction(merged);
       setSourceText(text);
       setDropped(parsed.dropped);
+      setDroppedItems(parsed.droppedItems);
       setStatuses(Object.fromEntries(merged.facts.map((fact) => [fact.id, "pending"])));
       setProfileStatus("pending");
       setHasEdits(false);
@@ -575,9 +590,19 @@ export default function ImportResume({
               {t("import.discardSavedReview")}
             </button>
             {dropped > 0 && (
-              <p role="status" className="mt-1 text-xs text-warn-ink">
-                {t("import.dropped", { count: dropped })}
-              </p>
+              <div role="status" className="mt-1 text-xs text-warn-ink">
+                <p>{t("import.dropped", { count: dropped })}</p>
+                {droppedItems.length > 0 && (
+                  <ul className="mt-1 list-disc pl-4">
+                    {droppedItems.map((item, index) => (
+                      <li key={index} className="break-words">
+                        {item.title ?? t("import.droppedUntitled")} —{" "}
+                        {t(item.reason === "orphan" ? "import.droppedOrphan" : "import.droppedInvalid")}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             )}
             <p className="mt-1 text-xs text-muted">{t("import.review")}</p>
           </div>
