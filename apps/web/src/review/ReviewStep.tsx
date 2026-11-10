@@ -134,6 +134,12 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
     ),
   ];
   const resume = renderResume(bank, draft, locale, jobSkillIds);
+  const orderedEntries = (section: "experiences" | "projects") => {
+    const order = new Map(resume[section].map(({ factId }, index) => [factId, index]));
+    return draft[section]
+      .map((entry, entryIndex) => ({ entry, entryIndex }))
+      .sort((a, b) => (order.get(a.entry.factId) ?? order.size) - (order.get(b.entry.factId) ?? order.size));
+  };
   const relevant = (prefix: (string | number)[]) =>
     violations.filter(({ path }) => prefix.every((part, i) => path[i] === part));
   function exportPdf() {
@@ -306,7 +312,7 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
             .map((section) => (
               <section key={section} className="space-y-4">
                 <h4 className="font-display text-lg font-semibold">{resumeT(locale, `resume.${section}`)}</h4>
-                {draft[section].map((entry, entryIndex) => {
+                {orderedEntries(section).map(({ entry, entryIndex }) => {
                   const experience =
                     section === "experiences"
                       ? resume.experiences.find((e) => e.factId === entry.factId)
@@ -438,7 +444,13 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
           {resume.skills.length > 0 && (
             <section>
               <h4 className="font-display text-lg font-semibold">{resumeT(locale, "resume.skills")}</h4>
-              <p>{resume.skills.map((skill) => skill.name).join(", ")}</p>
+              {resume.skillGroups.map((group) => (
+                <p key={group.category}>
+                  {resume.skillGroups.length > 1 &&
+                    `${resumeT(locale, `resume.category.${group.category}`)}: `}
+                  {group.skills.map((skill) => skill.name).join(", ")}
+                </p>
+              ))}
             </section>
           )}
           {resume.languages.length > 0 && (

@@ -25,12 +25,12 @@ describe("buildResumePrompt", () => {
     const data = JSON.parse(messages.user.split("\n\nFact data:\n")[1]!);
     expect(data.coveredTerms).toEqual([{ term: "SQL", via: ["PostgreSQL"] }]);
     expect(messages.system).toContain("Mirror the job posting's exact wording");
-    expect(messages.system).toContain('write "APIs REST"');
+    expect(messages.system).toContain('"atendimento ao cliente" / "customer service"');
     expect(messages.system).toContain("Never add a claim the cited facts do not support");
     expect(messages.system).toContain(
       "A covered term may be written when citing a fact that has one of its via skills",
     );
-    expect(messages.system).toContain("Order experiences' bullets and projects by relevance to the job");
+    expect(messages.system).toContain("Order experience and project bullets by relevance to the job");
     expect(messages.system).toContain(
       "choose the headline and summary to match the job title and main requirements",
     );
@@ -43,6 +43,39 @@ describe("buildResumePrompt", () => {
     expect(messages.system).toContain(
       "Keep each bullet one sentence, starting with a strong past-tense or present verb, with numbers from the facts when available",
     );
+  });
+
+  it("exige histórico completo, resumo, foco na vaga, voz consistente e fontes sem duplicação", () => {
+    const { system } = buildResumePrompt(input);
+    for (const rule of [
+      "Include EVERY non-archived experience fact in experiences",
+      "no gaps in the career timeline",
+      "Less relevant experiences get 1–2 bullets; the most relevant get more",
+      "Never drop an experience to save space",
+      "Always write headline and summary, each with sourceFactIds",
+      "The headline names the role the posting is hiring for",
+      "phrased only with titles/skills the facts support",
+      "never copy the profile's long multi-part headline verbatim if it does not match the posting",
+      "The summary has 2–4 sentences",
+      "posting's main responsibilities and requirements",
+      "Weight day-to-day responsibilities and required qualifications above nice-to-have or valued items and above company marketing text",
+      "Never present the same work twice",
+      "same name/organization",
+      "use only the one that fits best",
+      "Keep every experience; omit the duplicate project",
+      "in pt-BR, use first person without pronoun",
+      'present tense for current roles ("Desenvolvo", "Atendo", "Coordeno")',
+      'past tense for previous roles ("Desenvolvi", "Atendi", "Coordenei")',
+      "In en, use action verbs without pronoun, present for current roles and past for previous roles",
+      "Rewriting tense is allowed; changing meaning is not",
+      "Include relevant certifications/courses in educationIds, and spoken languages in skillIds when present in the facts",
+      "Never invent a language level",
+      "Every headline, summary and bullet must include sourceFactIds",
+    ]) {
+      expect(system).toContain(rule);
+    }
+    expect(system).not.toContain("Optional headline and summary");
+    expect(system).not.toContain("APIs REST");
   });
 
   it.each(["pt-BR", "en"] as const)("inclui os fatos ativos e o locale %s", (locale) => {

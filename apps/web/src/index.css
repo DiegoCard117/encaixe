@@ -181,6 +181,13 @@ html:has(dialog[open]) {
     color-scheme: light;
   }
 
+  /* Destaque de skill some no PDF, mesmo com "imprimir fundos" ligado. */
+  mark {
+    padding: 0;
+    background: none;
+    color: inherit;
+  }
+
   body {
     background: white;
     color: var(--paper-ink);

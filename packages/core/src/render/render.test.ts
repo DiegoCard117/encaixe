@@ -26,6 +26,92 @@ const draft = ResumeDraftSchema.parse({
 });
 
 describe("renderResume", () => {
+  it("ordena períodos com atuais primeiro, desempata pelo início e mantém itens sem período no fim", () => {
+    const periods = [
+      { start: "2020-01", end: "2022-12" },
+      { start: "2021-01", end: null },
+      { start: "2019-01", end: "2024-12" },
+      { start: "2023-01", end: null },
+      { start: "2022-01", end: "2024-12" },
+      undefined,
+      undefined,
+    ];
+    const chronologicalBank = FactBankSchema.parse({
+      ...sampleBank,
+      facts: periods.flatMap((period, i) => [
+        ...(period
+          ? [{ id: `exp_order-${i}`, kind: "experience", company: "Empresa", role: "Cargo", period }]
+          : []),
+        { id: `prj_order-${i}`, kind: "project", name: "Projeto", description: "Descrição", period },
+        ...(["bachelor", "course"] as const).map((type) => ({
+          id: `edu_${type}-${i}`,
+          kind: "education",
+          title: "Formação",
+          institution: "Instituição",
+          type,
+          status: "completed",
+          period,
+        })),
+      ]),
+    });
+    const selected = ResumeDraftSchema.parse({
+      experiences: periods.flatMap((period, i) =>
+        period ? [{ factId: `exp_order-${i}`, bullets: [] }] : [],
+      ),
+      projects: periods.map((_, i) => ({ factId: `prj_order-${i}`, bullets: [] })),
+      educationIds: periods.flatMap((_, i) => [`edu_bachelor-${i}`, `edu_course-${i}`]),
+    });
+    const original = JSON.parse(JSON.stringify(selected));
+    const rendered = renderResume(chronologicalBank, selected, "pt-BR");
+    const order = [3, 1, 4, 2, 0, 5, 6];
+    expect(rendered.experiences.map(({ factId }) => factId)).toEqual(
+      order.slice(0, 5).map((i) => `exp_order-${i}`),
+    );
+    expect(rendered.projects.map(({ factId }) => factId)).toEqual(order.map((i) => `prj_order-${i}`));
+    expect(rendered.education.map(({ factId }) => factId)).toEqual(order.map((i) => `edu_bachelor-${i}`));
+    expect(rendered.certifications.map(({ factId }) => factId)).toEqual(order.map((i) => `edu_course-${i}`));
+    expect(selected).toEqual(original);
+  });
+
+  it("limita a 20 skills, prioriza as da vaga e agrupa na ordem da primeira categoria", () => {
+    const categories = ["practice", "soft_skill", "tool"] as const;
+    const skillFacts = Array.from({ length: 24 }, (_, i) => ({
+      id: `skl_item-${i}`,
+      kind: "skill",
+      name: `Habilidade ${i}`,
+      category: categories[i % categories.length],
+      level: "advanced",
+    }));
+    const extendedBank = FactBankSchema.parse({
+      ...sampleBank,
+      facts: [
+        ...skillFacts,
+        { id: "skl_native", kind: "skill", name: "Português", category: "spoken_language", level: "native" },
+        { id: "skl_fluent", kind: "skill", name: "Inglês", category: "spoken_language", level: "fluent" },
+      ],
+    });
+    const selected = ResumeDraftSchema.parse({
+      experiences: [],
+      skillIds: ["skl_native", ...skillFacts.map(({ id }) => id), "skl_fluent"],
+    });
+    const rendered = renderResume(extendedBank, selected, "pt-BR", ["skl_item-23", "skl_item-22"]);
+    const expectedIds = ["skl_item-23", "skl_item-22", ...skillFacts.slice(0, 18).map(({ id }) => id)];
+    expect(rendered.skills.map(({ factId }) => factId)).toEqual(expectedIds);
+    expect(rendered.skillGroups.map(({ category }) => category)).toEqual(["tool", "soft_skill", "practice"]);
+    for (const group of rendered.skillGroups) {
+      expect(group.skills).toEqual(
+        rendered.skills
+          .filter(({ category }) => category === group.category)
+          .map(({ category, ...skill }) => skill),
+      );
+    }
+    expect(rendered.languages.map(({ level }) => level)).toEqual(["native", "fluent"]);
+    expect(renderResume(extendedBank, { ...selected, skillIds: ["skl_item-0"] }, "en").skillGroups).toEqual([
+      { category: "practice", skills: [{ factId: "skl_item-0", name: "Habilidade 0", level: "advanced" }] },
+    ]);
+    expect(renderResume(extendedBank, { ...selected, skillIds: [] }, "en").skillGroups).toEqual([]);
+  });
+
   it("separa cursos, certificações, bootcamps e idiomas sem duplicar", () => {
     const extendedBank = FactBankSchema.parse({
       ...sampleBank,

@@ -1,5 +1,16 @@
-// ponytail: lista curada só para detectar lacunas; evoluir para uma lista maior ou mantida pela comunidade.
+// ponytail: a lista fixa só detecta termos conhecidos; ler requisitos da vaga pela LLM é um passo futuro.
 export const KNOWN_SKILLS: readonly string[] = [
+  "RPA",
+  "Power Automate",
+  "UiPath",
+  "Automation Anywhere",
+  "Blue Prism",
+  "PyAutoGUI",
+  "Excel",
+  "SAP",
+  "Salesforce",
+  "HubSpot",
+  "Jira",
   "Python",
   "Django",
   "Flask",

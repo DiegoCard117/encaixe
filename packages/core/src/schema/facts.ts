@@ -93,7 +93,7 @@ export const SkillFactSchema = z.object({
   /** Grafias alternativas: "Postgres" para PostgreSQL, "DRF" para Django REST Framework. */
   aliases: z.array(NonEmptyText(60)).max(10).default([]),
   category: z.enum(SKILL_CATEGORIES),
-  level: z.enum(["basic", "intermediate", "advanced", "expert"]).optional(),
+  level: z.enum(["basic", "intermediate", "advanced", "expert", "native", "fluent"]).optional(),
   ...base,
 });
 
@@ -138,6 +138,7 @@ export type ExperienceFact = z.infer<typeof ExperienceFactSchema>;
 export type ProjectFact = z.infer<typeof ProjectFactSchema>;
 export type AchievementFact = z.infer<typeof AchievementFactSchema>;
 export type SkillFact = z.infer<typeof SkillFactSchema>;
+export type SkillCategory = SkillFact["category"];
 export type EducationFact = z.infer<typeof EducationFactSchema>;
 export type Fact = z.infer<typeof FactSchema>;
 /** Formato de entrada (campos com default são opcionais) — útil em formulários. */

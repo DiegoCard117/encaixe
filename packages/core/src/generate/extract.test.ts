@@ -41,6 +41,21 @@ const extraction: Extraction = {
 };
 
 describe("buildExtractionPrompt", () => {
+  it("extrai níveis de idioma declarados sem inferir proficiência", () => {
+    const { system } = buildExtractionPrompt({ resumeText: "Português nativo; inglês profissional" });
+    for (const rule of [
+      "basic|intermediate|advanced|expert|native|fluent",
+      "nativo/native → native",
+      "fluente/fluent → fluent",
+      "avançado/advanced → advanced",
+      "intermediário/intermediate → intermediate",
+      "básico/basic → basic",
+      "profissional/professional working proficiency → advanced",
+      "omit level if unstated",
+    ])
+      expect(system).toContain(rule);
+  });
+
   it("inclui o texto do currículo como dados", () => {
     const resumeText = "Ana Silva\nAcme 2020–2023\nSQL";
     const prompt = buildExtractionPrompt({ resumeText });

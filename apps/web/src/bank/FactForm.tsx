@@ -46,7 +46,7 @@ const enums = {
     "soft_skill",
     "spoken_language",
   ],
-  level: ["basic", "intermediate", "advanced", "expert"],
+  level: ["basic", "intermediate", "advanced", "expert", "native", "fluent"],
   type: [
     "high_school",
     "technical",
