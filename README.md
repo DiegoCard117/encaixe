@@ -43,6 +43,7 @@ Veja o [exemplo de banco de fatos em JSON](docs/exemplo-banco-de-fatos.json).
 
 - **Anthropic** (Claude) ou **OpenAI**: pagos por uso; gerar um currículo custa centavos, dependendo do modelo e do tamanho dos textos.
 - **Sem pagar**: Gemini, Groq ou OpenRouter têm camadas gratuitas. Confira os termos: planos gratuitos podem usar seus dados.
+- Não precisa saber o nome do modelo: ao colar a chave, o app busca os modelos que a sua conta pode usar e sugere um. Se ele estiver indisponível ou sobrecarregado, o app tenta outros da lista sozinho e avisa qual respondeu.
 - **Local**: rode um modelo no seu PC com o **Ollama**. Com o provedor local, nada é enviado a um serviço externo. Em **Configurar LLM**, escolha **Compatível com OpenAI** e o atalho **Ollama**. Para o Ollama aceitar o app, inicie-o com `OLLAMA_ORIGINS` apontando para o endereço do app. No site publicado, use `https://diegocard117.github.io`.
 
 ## Privacidade

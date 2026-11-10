@@ -15,10 +15,14 @@ import {
   isLocalBaseUrl,
   isValidBaseUrl,
   LlmError,
+  listModels,
   loadLlmSettings,
   presets,
+  pickFallbacks,
+  rankModels,
   saveLlmSettings,
   type LlmSettings,
+  type LlmErrorCode,
 } from "./llm";
 
 export interface SavedDraft {
@@ -53,7 +57,8 @@ function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSe
       loadLlmSettings() ?? {
         provider: "anthropic",
         baseUrl: presets.openai,
-        model: "claude-opus-5-5",
+        model: "",
+        fallbackModels: [],
         apiKey: "",
         remember: false,
       },
@@ -66,6 +71,50 @@ function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSe
   const [error, setError] = useState<TranslationKey>();
   const compatible = settings.provider === "openai-compatible";
   const keyRequired = !compatible || !isLocalBaseUrl(settings.baseUrl);
+  const [models, setModels] = useState<string[]>([]);
+  const [listing, setListing] = useState(false);
+  const [listError, setListError] = useState<LlmError>();
+  const [manualModel, setManualModel] = useState(false);
+  const [refresh, setRefresh] = useState(0);
+  const { provider, baseUrl, apiKey } = settings;
+  const canList =
+    (!compatible || isValidBaseUrl(settings.baseUrl)) && (!keyRequired || !!settings.apiKey.trim());
+  useEffect(() => {
+    const controller = new AbortController();
+    setModels([]);
+    setListError(undefined);
+    setListing(false);
+    setManualModel(false);
+    if (!canList) return;
+    const timer = setTimeout(async () => {
+      setListing(true);
+      try {
+        const ids = rankModels(
+          await listModels({ provider, baseUrl, apiKey }, controller.signal),
+          provider,
+          baseUrl,
+        );
+        if (controller.signal.aborted) return;
+        setModels(ids);
+        const recommended = ids[0];
+        if (recommended !== undefined) {
+          setSettings((current) => ({
+            ...current,
+            model: ids.includes(current.model) ? current.model : recommended,
+          }));
+        }
+      } catch (cause) {
+        if (!controller.signal.aborted) setListError(cause instanceof LlmError ? cause : new LlmError("api"));
+      } finally {
+        if (!controller.signal.aborted) setListing(false);
+      }
+    }, 600);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [provider, baseUrl, apiKey, canList, refresh]);
+  const fallbacks = pickFallbacks(models, settings.model.trim());
   return (
     <Modal title={t("llm.title")} onClose={onClose}>
       <form
@@ -82,6 +131,7 @@ function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSe
             baseUrl: settings.baseUrl.trim(),
             model: settings.model.trim(),
             apiKey: settings.apiKey.trim(),
+            fallbackModels: fallbacks,
           };
           saveLlmSettings(value);
           onSave(value);
@@ -100,7 +150,8 @@ function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSe
                   setSettings({
                     ...settings,
                     provider,
-                    model: provider === "anthropic" ? "claude-opus-5-5" : "",
+                    model: "",
+                    fallbackModels: [],
                   })
                 }
               />
@@ -154,26 +205,61 @@ function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSe
         )}
         <label className="block">
           {t("llm.model")}
-          {settings.provider === "anthropic" ? (
+          {models.length > 0 && !manualModel ? (
             <select
               className="rounded-lg border border-line bg-bg p-3 text-ink min-h-10 w-full"
               value={settings.model}
-              onChange={(e) => setSettings({ ...settings, model: e.target.value })}
+              onChange={(e) => {
+                if (e.target.value === "") {
+                  setManualModel(true);
+                  setSettings({ ...settings, model: "" });
+                } else setSettings({ ...settings, model: e.target.value });
+              }}
             >
-              {["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"].map((model) => (
-                <option key={model}>{model}</option>
+              {models.map((model, index) => (
+                <option key={model} value={model}>
+                  {model}
+                  {index === 0 ? ` (${t("llm.recommended")})` : ""}
+                </option>
               ))}
+              <option value="">{t("llm.other")}</option>
             </select>
           ) : (
             <input
               className="rounded-lg border border-line bg-bg p-3 text-ink min-h-10 w-full"
               required
               value={settings.model}
-              aria-describedby="llm-model-hint"
+              aria-describedby={compatible ? "llm-model-hint" : undefined}
               onChange={(e) => setSettings({ ...settings, model: e.target.value })}
             />
           )}
         </label>
+        <button
+          className="bank-button min-h-10"
+          type="button"
+          disabled={!canList || listing}
+          onClick={() => setRefresh((value) => value + 1)}
+        >
+          {t("llm.refreshModels")}
+        </button>
+        {listing && (
+          <p className="text-sm text-muted" role="status">
+            {t("llm.loadingModels")}
+          </p>
+        )}
+        {listError && (
+          <div role="alert" className="bank-errors">
+            <p>{t(listError.code === "canceled" ? "generation.network" : `generation.${listError.code}`)}</p>
+            {listError.detail && (
+              <p className="break-words font-mono text-xs">
+                {t("generation.detail")} {listError.detail}
+              </p>
+            )}
+          </div>
+        )}
+        {fallbacks.length > 0 && (
+          <p className="text-sm text-muted">{t("llm.fallbacks", { fallbacks: fallbacks.join(", ") })}</p>
+        )}
         {compatible && (
           <p id="llm-model-hint" className="text-sm text-muted">
             {t(`llm.modelHint.${preset}`)}
@@ -241,6 +327,10 @@ export function useLlmTask() {
   );
   const [error, setErrorKey] = useState<TranslationKey>();
   const [detail, setDetail] = useState<string>();
+  const [modelStatus, setModelStatus] = useState<{
+    used: string;
+    skipped: { model: string; code: LlmErrorCode }[];
+  }>();
   const setError = (key: TranslationKey | undefined, providerDetail?: string) => {
     setErrorKey(key);
     setDetail(providerDetail);
@@ -255,8 +345,14 @@ export function useLlmTask() {
     controller.current = execution;
     setBusy(true);
     setError(undefined);
+    setModelStatus(undefined);
     try {
-      await task(createCallLlm(settings, execution.signal));
+      await task(
+        createCallLlm(settings, execution.signal, (used, skipped) => {
+          if (controller.current === execution && !execution.signal.aborted && skipped.length)
+            setModelStatus({ used, skipped });
+        }),
+      );
     } catch (cause) {
       if (controller.current !== execution || execution.signal.aborted) return;
       if (cause instanceof LlmError) {
@@ -318,6 +414,21 @@ export function useLlmTask() {
               {t("generation.retry")}
             </button>
           </div>
+        )}
+        {modelStatus && (
+          <p role="status" className="text-sm text-muted">
+            {t("generation.modelStatus", {
+              used: modelStatus.used,
+              skipped: modelStatus.skipped
+                .map(({ model, code }) =>
+                  t(
+                    code === "overloaded" ? "generation.skippedOverloaded" : "generation.skippedUnavailable",
+                    { model },
+                  ),
+                )
+                .join(", "),
+            })}
+          </p>
         )}
         {dialog && (
           <LlmDialog

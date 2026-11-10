@@ -43,6 +43,7 @@ See the [sample fact bank in JSON](docs/exemplo-banco-de-fatos.json).
 
 - **Anthropic** (Claude) or **OpenAI**: paid per use. Generating a resume costs cents, depending on the model and text length.
 - **Free options**: Gemini, Groq and OpenRouter offer free tiers. Check their terms: free plans may use your data.
+- You don't need to know model names: after you paste your key, the app fetches the models your account can use and suggests one. If it is unavailable or overloaded, the app tries others from the list and tells you which one answered.
 - **Local**: run a model on your PC with **Ollama**. With a local provider, nothing is sent to an external service. In **Configure LLM**, choose **OpenAI-compatible** and the **Ollama** preset. Start Ollama with `OLLAMA_ORIGINS` set to the app's origin so it can accept requests. For the published app, use `https://diegocard117.github.io`.
 
 ## Privacy

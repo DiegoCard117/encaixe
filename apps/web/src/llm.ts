@@ -30,11 +30,21 @@ export interface LlmSettings {
   provider: Provider;
   baseUrl: string;
   model: string;
+  fallbackModels: string[];
   apiKey: string;
   remember: boolean;
 }
 export type LlmErrorCode =
-  "auth" | "model" | "rate_limit" | "refused" | "truncated" | "network" | "api" | "timeout" | "canceled";
+  | "auth"
+  | "model"
+  | "overloaded"
+  | "rate_limit"
+  | "refused"
+  | "truncated"
+  | "network"
+  | "api"
+  | "timeout"
+  | "canceled";
 export class LlmError extends Error {
   constructor(
     public code: LlmErrorCode,
@@ -74,6 +84,11 @@ export function loadLlmSettings(): LlmSettings | undefined {
           provider: value.provider,
           baseUrl: value.baseUrl,
           model: value.model,
+          fallbackModels: Array.isArray(value.fallbackModels)
+            ? value.fallbackModels.filter(
+                (id: unknown): id is string => typeof id === "string" && !!id.trim(),
+              )
+            : [],
           apiKey: value.apiKey,
           remember: persistent,
         };
@@ -105,7 +120,176 @@ export function saveLlmSettings(s: LlmSettings): void {
     /* The current configuration still works in memory. */
   }
 }
-export function createCallLlm(s: LlmSettings, signal?: AbortSignal): CallLlm {
+function apiError(status: number | undefined, detail = ""): LlmError {
+  const code: LlmErrorCode =
+    status === 401 || status === 403 || /api.?key|unauthori[sz]ed|permission/i.test(detail)
+      ? "auth"
+      : status === 429
+        ? "rate_limit"
+        : status === 503 || status === 529
+          ? "overloaded"
+          : status === 404 ||
+              (/model/i.test(detail) &&
+                /not found|does not exist|not supported|no longer available/i.test(detail))
+            ? "model"
+            : /high demand|overloaded|unavailable/i.test(detail)
+              ? "overloaded"
+              : "api";
+  return new LlmError(code, status, detail.slice(0, 300) || undefined);
+}
+
+async function responseError(res: Response): Promise<LlmError> {
+  let detail = "";
+  try {
+    const body = await res.json();
+    detail = String((Array.isArray(body) ? body[0] : body)?.error?.message ?? "");
+  } catch {
+    /* The status still identifies errors without a readable body. */
+  }
+  return apiError(res.status, detail);
+}
+
+export async function listModels(
+  settings: Pick<LlmSettings, "provider" | "baseUrl" | "apiKey">,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  let ids: unknown[];
+  if (settings.provider === "anthropic") {
+    let Anthropic: typeof import("@anthropic-ai/sdk").default;
+    try {
+      ({ default: Anthropic } = await import("@anthropic-ai/sdk"));
+    } catch (error) {
+      throw new LlmError(
+        "network",
+        undefined,
+        error instanceof Error ? error.message.slice(0, 300) : undefined,
+      );
+    }
+    try {
+      const client = new Anthropic({
+        apiKey: settings.apiKey.trim(),
+        dangerouslyAllowBrowser: true,
+        maxRetries: 0,
+      });
+      ids = [];
+      for await (const model of client.models.list({}, { signal })) ids.push(model.id);
+    } catch (error) {
+      if (error instanceof Anthropic.APIConnectionError)
+        throw new LlmError("network", undefined, error.message.slice(0, 300));
+      const mapped =
+        error instanceof Anthropic.APIError ? apiError(error.status, error.message) : new LlmError("api");
+      throw new LlmError(mapped.code === "auth" ? "auth" : "api", mapped.status, mapped.detail);
+    }
+  } else {
+    let res: Response;
+    try {
+      res = await fetch(`${settings.baseUrl.trim().replace(/\/+$/, "")}/models`, {
+        signal,
+        headers: settings.apiKey.trim() ? { Authorization: `Bearer ${settings.apiKey.trim()}` } : {},
+      });
+    } catch (error) {
+      throw new LlmError(
+        "network",
+        undefined,
+        error instanceof Error ? error.message.slice(0, 300) : undefined,
+      );
+    }
+    if (!res.ok) {
+      const error = await responseError(res);
+      throw new LlmError(error.code === "auth" ? "auth" : "api", error.status, error.detail);
+    }
+    try {
+      const body = await res.json();
+      if (!Array.isArray(body.data)) throw new Error("Invalid models response");
+      ids = body.data.map((model: { id?: unknown } | null) => model?.id);
+    } catch (error) {
+      throw new LlmError("api", res.status, error instanceof Error ? error.message.slice(0, 300) : undefined);
+    }
+  }
+  return [
+    ...new Set(
+      ids
+        .filter((id): id is string => typeof id === "string")
+        .map((id) => id.replace(/^models\//, ""))
+        .filter(
+          (id) =>
+            id &&
+            !/embed|tts|whisper|dall-e|imagen|image|audio|speech|moderation|realtime|transcribe|aqa|veo|lyria/i.test(
+              id,
+            ),
+        ),
+    ),
+  ];
+}
+
+export function rankModels(ids: string[], provider: Provider, baseUrl: string): string[] {
+  const gemini = baseUrl.includes("generativelanguage");
+  const group = (id: string) => {
+    if (gemini) return /flash/i.test(id) ? (/lite/i.test(id) ? 1 : 0) : 2;
+    if (provider === "anthropic") {
+      const index = ["opus", "sonnet", "haiku"].findIndex((name) => id.toLowerCase().includes(name));
+      return index < 0 ? 3 : index;
+    }
+    return 0;
+  };
+  return [...ids].sort((a, b) => {
+    const preference = group(a) - group(b);
+    if (preference) return preference;
+    if (gemini) {
+      const preview = Number(/preview|exp/i.test(a)) - Number(/preview|exp/i.test(b));
+      if (preview) return preview;
+    }
+    const av = (a.match(/\d+/g) ?? []).map(Number);
+    const bv = (b.match(/\d+/g) ?? []).map(Number);
+    for (let i = 0; i < Math.max(av.length, bv.length); i++) {
+      const difference = (bv[i] ?? 0) - (av[i] ?? 0);
+      if (difference) return difference;
+    }
+    return 0;
+  });
+}
+
+/**
+ * Plano B: os próximos da lista e, se nenhum deles for, o primeiro modelo "leve"
+ * (lite, mini, haiku, small). Quando os grandes estão sobrecarregados, o leve
+ * costuma responder — foi o caso real do Gemini.
+ */
+export function pickFallbacks(ranked: string[], chosen: string): string[] {
+  const rest = ranked.filter((id) => id !== chosen);
+  const picked = rest.slice(0, 2);
+  // Parte do nome separada por hífen: "gemini" contém "mini", mas não é leve.
+  const light = rest.find((id) => /(^|[-_.:/])(lite|mini|haiku|small)([-_.:]|$)/i.test(id));
+  if (light && !picked.includes(light)) picked.push(light);
+  return picked;
+}
+
+export function createCallLlm(
+  settings: LlmSettings,
+  signal?: AbortSignal,
+  onModel?: (used: string, skipped: { model: string; code: LlmErrorCode }[]) => void,
+): CallLlm {
+  return async (messages) => {
+    const skipped: { model: string; code: LlmErrorCode }[] = [];
+    let firstError: LlmError | undefined;
+    for (const model of new Set([settings.model, ...(settings.fallbackModels ?? [])])) {
+      let result: string;
+      try {
+        result = await createModelCall({ ...settings, model }, signal)(messages);
+      } catch (error) {
+        if (!(error instanceof LlmError) || (error.code !== "model" && error.code !== "overloaded"))
+          throw error;
+        firstError ??= error;
+        skipped.push({ model, code: error.code });
+        continue;
+      }
+      onModel?.(model, skipped);
+      return result;
+    }
+    throw firstError;
+  };
+}
+
+function createModelCall(s: LlmSettings, signal?: AbortSignal): CallLlm {
   return async (messages) => {
     const timeout = AbortSignal.timeout(300_000);
     const combinedSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
@@ -125,17 +309,13 @@ export function createCallLlm(s: LlmSettings, signal?: AbortSignal): CallLlm {
       }
       try {
         checkAbort();
-        const client = new Anthropic({ apiKey: s.apiKey, dangerouslyAllowBrowser: true });
-        const withFallback = s.model === "claude-opus-5-5" || s.model === "claude-sonnet-5-5";
-        const res = await client.beta.messages.create(
+        const client = new Anthropic({ apiKey: s.apiKey, dangerouslyAllowBrowser: true, maxRetries: 0 });
+        const res = await client.messages.create(
           {
             model: s.model,
             max_tokens: 16000,
             system: messages.system,
             messages: [{ role: "user", content: messages.user }],
-            ...(withFallback
-              ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
-              : {}),
           },
           { signal: combinedSignal, timeout: 300_000 },
         );
@@ -153,7 +333,7 @@ export function createCallLlm(s: LlmSettings, signal?: AbortSignal): CallLlm {
         if (error instanceof Anthropic.APIUserAbortError) throw new LlmError("canceled");
         if (error instanceof Anthropic.APIConnectionTimeoutError) throw new LlmError("timeout");
         if (error instanceof Anthropic.APIConnectionError) throw new LlmError("network");
-        if (error instanceof Anthropic.APIError) throw new LlmError("api", error.status, error.message);
+        if (error instanceof Anthropic.APIError) throw apiError(error.status, error.message);
         throw new LlmError("api");
       }
     }
@@ -191,26 +371,9 @@ export function createCallLlm(s: LlmSettings, signal?: AbortSignal): CallLlm {
     }
     checkAbort();
     if (!res.ok) {
-      let detail = "";
-      try {
-        // OpenAI devolve {error}; o Gemini devolve [{error}].
-        const body = await res.json();
-        detail = String((Array.isArray(body) ? body[0] : body)?.error?.message ?? "");
-      } catch {
-        /* Sem corpo legível: fica só o código. */
-      }
+      const error = await responseError(res);
       checkAbort();
-      // O Gemini responde chave inválida com 400, não 401.
-      const code: LlmErrorCode =
-        res.status === 401 || res.status === 403 || /api.?key|unauthori[sz]ed|permission/i.test(detail)
-          ? "auth"
-          : res.status === 429
-            ? "rate_limit"
-            : res.status === 404 ||
-                (/model/i.test(detail) && /not found|does not exist|not supported/i.test(detail))
-              ? "model"
-              : "api";
-      throw new LlmError(code, res.status, detail.slice(0, 300) || undefined);
+      throw error;
     }
     try {
       const data = await res.json();
