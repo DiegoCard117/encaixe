@@ -68,8 +68,22 @@ In development. Follow the [roadmap](https://github.com/users/DiegoCard117/proje
 - [x] PDF export through browser printing, enabled only with zero violations
 - [x] GitHub Pages deployment on every push to `main`
 - [x] Old resume import (pasted text, PDF or TXT): the LLM transcribes facts, the app flags numbers and skills missing from the source, and each fact enters the bank only after confirmation
+- [x] CLI to validate a bank, check a draft and see job fit (`pnpm cli`)
 
-A remote bank using Supabase and a CLI are planned. Neither is available yet.
+A remote bank using Supabase is planned. It is not available yet.
+
+### CLI
+
+For scripts and automation, from the repository root (after `pnpm install`):
+
+```powershell
+pnpm cli validate docs/exemplo-banco-de-fatos.json
+pnpm cli check bank.json draft.json
+pnpm cli fit bank.json job.txt
+```
+
+`-` reads standard input, `--json` prints codes only for other programs and `--lang pt-BR|en` picks the language.
+Exit code is 0 when everything is fine, 1 for an invalid bank or violations and 2 for usage or read errors.
 
 ## Development
 

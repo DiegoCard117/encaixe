@@ -10,6 +10,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "cli": "tsx apps/cli/src/main.ts",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "format": "prettier --write .",
@@ -17,6 +18,7 @@
   },
   "devDependencies": {
     "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }
 }

@@ -69,8 +69,22 @@ Em desenvolvimento. Acompanhe o [roadmap](https://github.com/users/DiegoCard117/
 - [x] Publicação no GitHub Pages a cada push na `main`
 - [x] Importação de currículo antigo (texto colado, PDF ou TXT): a LLM transcreve os fatos, o app aponta números e skills que
       não estão no texto e cada fato só entra no banco depois de confirmado
+- [x] CLI para validar o banco, checar um rascunho e ver a aderência (`pnpm cli`)
 
-Banco remoto com Supabase e CLI estão planejados. Ainda não estão disponíveis.
+Banco remoto com Supabase está planejado. Ainda não está disponível.
+
+### CLI
+
+Para scripts e automação, na raiz do repositório (depois do `pnpm install`):
+
+```powershell
+pnpm cli validate docs/exemplo-banco-de-fatos.json
+pnpm cli check banco.json rascunho.json
+pnpm cli fit banco.json vaga.txt
+```
+
+`-` lê da entrada padrão, `--json` imprime só códigos para outros programas e `--lang pt-BR|en` escolhe o idioma.
+O código de saída é 0 quando está tudo certo, 1 com banco inválido ou violações e 2 com erro de uso ou de leitura.
 
 ## Desenvolvimento
 

@@ -39,7 +39,7 @@ O CI roda `format:check`, `typecheck` e `test` nos pull requests e nos pushes na
 | `apps/web`      | Interface React + Vite + Tailwind e integrações no navegador.                         |
 | `docs/`         | Decisões, fluxo do produto, identidade visual e exemplo do banco de fatos.            |
 
-A CLI está planejada. Ainda não há uma CLI disponível.
+`apps/cli` é a CLI (`pnpm cli`), que roda o TypeScript direto com `tsx`. A lógica fica em `src/cli.ts`, testável sem processo; `src/main.ts` só liga ao terminal.
 
 - Mantenha o core puro: sem UI, rede, disco ou DOM.
 - O core devolve códigos, nunca frases para o usuário. A interface traduz os códigos.
