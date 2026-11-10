@@ -239,7 +239,12 @@ export function useLlmTask() {
     },
     [],
   );
-  const [error, setError] = useState<TranslationKey>();
+  const [error, setErrorKey] = useState<TranslationKey>();
+  const [detail, setDetail] = useState<string>();
+  const setError = (key: TranslationKey | undefined, providerDetail?: string) => {
+    setErrorKey(key);
+    setDetail(providerDetail);
+  };
   const [dialog, setDialog] = useState<"configure" | "generate">();
   const settingsRef = useRef<LlmSettings | undefined>(undefined);
   const lastTask = useRef<((callLlm: CallLlm) => Promise<void>) | undefined>(undefined);
@@ -255,7 +260,7 @@ export function useLlmTask() {
     } catch (cause) {
       if (controller.current !== execution || execution.signal.aborted) return;
       if (cause instanceof LlmError) {
-        if (cause.code !== "canceled") setError(`generation.${cause.code}`);
+        if (cause.code !== "canceled") setError(`generation.${cause.code}`, cause.detail);
       } else {
         setError("generation.api");
       }
@@ -297,6 +302,11 @@ export function useLlmTask() {
         {error && (
           <div role="alert" className="bank-errors">
             <p>{t(error)}</p>
+            {detail && (
+              <p className="break-words font-mono text-xs">
+                {t("generation.detail")} {detail}
+              </p>
+            )}
             <button
               type="button"
               className="bank-button min-h-10"

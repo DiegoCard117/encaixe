@@ -138,6 +138,8 @@ const ptBR = {
   "generation.truncated": "A resposta foi interrompida antes de terminar. Tente de novo.",
   "generation.network": "Não foi possível conectar ao provedor. Confira sua conexão.",
   "generation.api": "O provedor retornou um erro. Tente de novo.",
+  "generation.model": "Modelo não encontrado. Confira o nome do modelo em Configurar LLM.",
+  "generation.detail": "Mensagem do provedor:",
   "generation.invalid_json": "O provedor retornou JSON inválido. Tente de novo.",
   "generation.invalid_schema": "A resposta não segue o formato de currículo. Tente de novo.",
   "generation.storage":
@@ -449,6 +451,8 @@ const en: Record<keyof typeof ptBR, string> = {
   "generation.truncated": "The response ended before completion. Try again.",
   "generation.network": "Could not connect to the provider. Check your connection.",
   "generation.api": "The provider returned an error. Try again.",
+  "generation.model": "Model not found. Check the model name in Configure LLM.",
+  "generation.detail": "Provider message:",
   "generation.invalid_json": "The provider returned invalid JSON. Try again.",
   "generation.invalid_schema": "The response does not follow the resume format. Try again.",
   "generation.storage": "Could not save in this browser. Free up space or allow storage and try again.",

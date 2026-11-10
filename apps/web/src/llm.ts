@@ -34,11 +34,13 @@ export interface LlmSettings {
   remember: boolean;
 }
 export type LlmErrorCode =
-  "auth" | "rate_limit" | "refused" | "truncated" | "network" | "api" | "timeout" | "canceled";
+  "auth" | "model" | "rate_limit" | "refused" | "truncated" | "network" | "api" | "timeout" | "canceled";
 export class LlmError extends Error {
   constructor(
     public code: LlmErrorCode,
     public status?: number,
+    /** Mensagem do provedor, para a pessoa entender o erro (ex.: "Please pass a valid API key"). */
+    public detail?: string,
   ) {
     super(code);
     this.name = "LlmError";
@@ -145,11 +147,13 @@ export function createCallLlm(s: LlmSettings, signal?: AbortSignal): CallLlm {
         checkAbort();
         if (error instanceof LlmError) throw error;
         if (error instanceof Anthropic.AuthenticationError) throw new LlmError("auth", error.status);
+        if (error instanceof Anthropic.NotFoundError)
+          throw new LlmError("model", error.status, error.message);
         if (error instanceof Anthropic.RateLimitError) throw new LlmError("rate_limit", error.status);
         if (error instanceof Anthropic.APIUserAbortError) throw new LlmError("canceled");
         if (error instanceof Anthropic.APIConnectionTimeoutError) throw new LlmError("timeout");
         if (error instanceof Anthropic.APIConnectionError) throw new LlmError("network");
-        if (error instanceof Anthropic.APIError) throw new LlmError("api", error.status);
+        if (error instanceof Anthropic.APIError) throw new LlmError("api", error.status, error.message);
         throw new LlmError("api");
       }
     }
@@ -186,8 +190,28 @@ export function createCallLlm(s: LlmSettings, signal?: AbortSignal): CallLlm {
       throw new LlmError("network");
     }
     checkAbort();
-    if (!res.ok)
-      throw new LlmError(res.status === 401 ? "auth" : res.status === 429 ? "rate_limit" : "api", res.status);
+    if (!res.ok) {
+      let detail = "";
+      try {
+        // OpenAI devolve {error}; o Gemini devolve [{error}].
+        const body = await res.json();
+        detail = String((Array.isArray(body) ? body[0] : body)?.error?.message ?? "");
+      } catch {
+        /* Sem corpo legível: fica só o código. */
+      }
+      checkAbort();
+      // O Gemini responde chave inválida com 400, não 401.
+      const code: LlmErrorCode =
+        res.status === 401 || res.status === 403 || /api.?key|unauthori[sz]ed|permission/i.test(detail)
+          ? "auth"
+          : res.status === 429
+            ? "rate_limit"
+            : res.status === 404 ||
+                (/model/i.test(detail) && /not found|does not exist|not supported/i.test(detail))
+              ? "model"
+              : "api";
+      throw new LlmError(code, res.status, detail.slice(0, 300) || undefined);
+    }
     try {
       const data = await res.json();
       checkAbort();
