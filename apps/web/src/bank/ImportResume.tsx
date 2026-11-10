@@ -165,6 +165,7 @@ export default function ImportResume({
       if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
         const pdfjs = await import("pdfjs-dist");
         pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+        // pdf.js 6 não executa código gerado (sem eval); a falha de fontes CVE-2024-4367 é de versões antigas.
         const loading = pdfjs.getDocument({ data: await file.arrayBuffer() });
         try {
           const pdf = await loading.promise;

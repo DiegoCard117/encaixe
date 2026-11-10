@@ -47,6 +47,7 @@ O CI roda `format:check`, `typecheck` e `test` nos pull requests e nos pushes na
 - Use cores apenas por tokens, com valores para os temas claro e escuro.
 - Faça o layout funcionar a 375px, sem rolagem lateral.
 - Não adicione dependências sem explicar o motivo.
+- Segurança: nunca use `dangerouslySetInnerHTML`; valide com os schemas do core tudo que vem de fora (arquivo, Supabase, LLM); link novo usa `WebUrlSchema` (só `http`/`https`); conexão nova da página precisa caber na CSP do `vite.config.ts`. Veja [SECURITY.md](SECURITY.md).
 - Teste com Vitest a lógica do core e a lógica pura da web (ex.: `apps/web/src/sync/decide.ts`). Mantenha os testes junto do código, em arquivos `*.test.ts`.
 
 ## Testar a geração sem gastar

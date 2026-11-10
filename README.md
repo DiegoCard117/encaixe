@@ -66,6 +66,8 @@ Se você ligar a sincronização com o Supabase (opcional), o banco também vai 
 
 Para apagar tudo deste navegador, use **Apagar tudo deste navegador** em **Configurações** › Zona de perigo, no banco de fatos (com opção de apagar também o banco no Supabase).
 
+Detalhes do modelo de segurança, riscos conhecidos e como reportar falhas: [SECURITY.md](SECURITY.md).
+
 Use **Exportar JSON** para manter um backup do banco de fatos. O armazenamento do navegador não substitui uma cópia sua.
 
 ## Status

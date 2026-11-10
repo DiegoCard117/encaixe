@@ -66,6 +66,8 @@ If you turn on Supabase sync (optional), the bank also goes to **your own** Supa
 
 To wipe everything from this browser, use **Delete everything from this browser** under **Settings** › Danger zone in the fact bank (optionally also deleting your bank in Supabase).
 
+Security model, known risks and how to report a vulnerability: [SECURITY.md](SECURITY.md) (in Portuguese).
+
 Use **Export JSON** to back up your fact bank. Browser storage is no substitute for your own copy.
 
 ## Status

@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { MetricSchema, NonEmptyText, PeriodSchema, TagsSchema, YearMonthSchema } from "./common";
+import {
+  MetricSchema,
+  NonEmptyText,
+  PeriodSchema,
+  TagsSchema,
+  WebUrlSchema,
+  YearMonthSchema,
+} from "./common";
 import { FactIdSchema, factIdOf } from "./ids";
 
 /**
@@ -46,8 +53,8 @@ export const ProjectFactSchema = z.object({
   /** Emprego ou formação onde o projeto aconteceu (opcional). */
   contextId: FactIdSchema.optional(),
   period: PeriodSchema.optional(),
-  url: z.url().optional(),
-  repositoryUrl: z.url().optional(),
+  url: WebUrlSchema.optional(),
+  repositoryUrl: WebUrlSchema.optional(),
   skillIds: skillRefs,
   ...base,
 });
@@ -119,7 +126,7 @@ export const EducationFactSchema = z.object({
   status: z.enum(["completed", "in_progress", "incomplete"]),
   /** Certificação: use start = end = mês de emissão. */
   period: PeriodSchema.optional(),
-  credentialUrl: z.url().optional(),
+  credentialUrl: WebUrlSchema.optional(),
   skillIds: skillRefs,
   ...base,
 });

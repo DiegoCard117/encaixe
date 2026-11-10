@@ -203,3 +203,29 @@ describe("removeFact", () => {
     expect(FactBankSchema.safeParse(result.bank).success).toBe(true);
   });
 });
+
+import { LinkSchema } from "./common";
+
+describe("segurança: links só http/https", () => {
+  it.each([
+    "javascript:alert(1)",
+    "JaVaScRiPt:alert(1)",
+    "data:text/html,<script>alert(1)</script>",
+    "vbscript:x",
+    "file:///etc/passwd",
+  ])("recusa %s", (url) => {
+    expect(LinkSchema.safeParse({ label: "x", url }).success).toBe(false);
+    expect(
+      FactBankSchema.safeParse({
+        schemaVersion: 1,
+        profile: { fullName: "A", links: [] },
+        facts: [{ id: "prj_001", kind: "project", name: "P", description: "d", url }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("aceita http e https", () => {
+    for (const url of ["https://exemplo.com", "http://exemplo.com/x"])
+      expect(LinkSchema.safeParse({ label: "x", url }).success).toBe(true);
+  });
+});

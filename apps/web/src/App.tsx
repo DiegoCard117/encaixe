@@ -7,6 +7,7 @@ import { loadBank } from "./bank/storage";
 import JobStep from "./job/JobStep";
 import ReviewStep from "./review/ReviewStep";
 import SupportDialog from "./SupportDialog";
+import ConnectionPrompt from "./sync/ConnectionPrompt";
 import { hasSupport } from "./support";
 
 export default function App() {
@@ -127,6 +128,7 @@ export default function App() {
         )}
       </footer>
       {supporting && <SupportDialog onClose={() => setSupporting(false)} />}
+      <ConnectionPrompt />
     </main>
   );
 }

@@ -6,19 +6,14 @@ import "@fontsource-variable/inter";
 import "@fontsource-variable/space-grotesk";
 import "@fontsource-variable/jetbrains-mono";
 import "./index.css";
-import { clearLastSync, loadSyncConfig, readConnectionLink, saveSyncConfig } from "./sync/supabase";
+import { readConnectionLink } from "./sync/supabase";
 
+// Link de conexão: nada é salvo aqui. A pessoa confirma o projeto antes (ConnectionPrompt),
+// porque um link pode apontar para o Supabase de outra pessoa.
 if (location.hash === "#/conectar" || location.hash.startsWith("#/conectar?")) {
   const connection = readConnectionLink(location.hash);
   try {
-    if (connection) {
-      if (loadSyncConfig()?.url !== connection.config.url) clearLastSync();
-      if (saveSyncConfig(connection.config)) {
-        if (connection.email) sessionStorage.setItem("encaixe.connectEmail", connection.email);
-        else sessionStorage.removeItem("encaixe.connectEmail");
-        sessionStorage.setItem("encaixe.openSettings", "1");
-      }
-    }
+    if (connection) sessionStorage.setItem("encaixe.pendingConnection", JSON.stringify(connection));
   } catch {
     /* Storage may be unavailable. */
   } finally {

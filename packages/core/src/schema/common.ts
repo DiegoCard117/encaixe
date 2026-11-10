@@ -40,8 +40,14 @@ export const MetricSchema = z.object({
 });
 export type Metric = z.infer<typeof MetricSchema>;
 
+/**
+ * Endereço web: só http ou https. Links vêm de JSON importado, da extração por LLM e do
+ * Supabase; javascript:, data: e afins nunca devem virar um link clicável.
+ */
+export const WebUrlSchema = z.url({ protocol: /^https?$/ });
+
 export const LinkSchema = z.object({
   label: NonEmptyText(40),
-  url: z.url(),
+  url: WebUrlSchema,
 });
 export type Link = z.infer<typeof LinkSchema>;

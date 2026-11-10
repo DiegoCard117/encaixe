@@ -15,7 +15,7 @@ O banco local continua sendo o padrão. Para sincronizar entre dispositivos, use
 
 ## Outros aparelhos
 
-No aparelho já conectado, toque em **Copiar link de conexão** e abra o link no outro (pelo WhatsApp Web, por exemplo). O link leva a URL do projeto, a chave pública e o seu e-mail depois do `#`, parte do endereço que o navegador não envia a servidor nenhum. No outro aparelho, escolha **Entrar com senha**.
+No aparelho já conectado, toque em **Copiar link de conexão** e abra o link no outro (pelo WhatsApp Web, por exemplo). O link leva a URL do projeto, a chave pública e o seu e-mail depois do `#`, parte do endereço que o navegador não envia a servidor nenhum. Ao abrir, o app mostra o endereço do projeto e só salva a conexão se você confirmar (um link de outra pessoa poderia apontar para o Supabase dela). No outro aparelho, escolha **Entrar com senha**.
 
 Cada aparelho tem a própria sessão. Copiar a sessão de um aparelho para outro não funciona: o Supabase troca o token de renovação a cada uso e encerraria a sessão dos dois.
 

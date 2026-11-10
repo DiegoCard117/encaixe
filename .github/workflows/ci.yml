@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
 
+# Token com o mínimo: a CI só lê o código.
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
