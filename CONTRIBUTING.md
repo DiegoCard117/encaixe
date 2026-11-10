@@ -47,7 +47,7 @@ O CI roda `format:check`, `typecheck` e `test` nos pull requests e nos pushes na
 - Use cores apenas por tokens, com valores para os temas claro e escuro.
 - Faça o layout funcionar a 375px, sem rolagem lateral.
 - Não adicione dependências sem explicar o motivo.
-- Teste a lógica do core com Vitest. Mantenha os testes junto do código, em arquivos `*.test.ts`.
+- Teste com Vitest a lógica do core e a lógica pura da web (ex.: `apps/web/src/sync/decide.ts`). Mantenha os testes junto do código, em arquivos `*.test.ts`.
 
 ## Testar a geração sem gastar
 

@@ -6,6 +6,41 @@ import { VALIDATION_CODES, type ValidationCode } from "../../../packages/core/sr
 export type Locale = "pt-BR" | "en";
 
 const ptBR = {
+  "sync.connect": "Conectar Supabase",
+  "sync.url": "URL do projeto",
+  "sync.key": "Chave pública (anon ou publishable)",
+  "sync.keyHint": "Nunca use a chave secreta (service_role).",
+  "sync.help": "Como configurar",
+  "sync.sendLink": "Enviar link de acesso",
+  "sync.sent": "Enviamos um link para {email}. Abra neste navegador.",
+  "sync.connected": "Conectado como {email}",
+  "sync.synced": "Sincronizado às {time}",
+  "sync.now": "Sincronizar agora",
+  "sync.signOut": "Sair",
+  "sync.remove": "Remover conexão",
+  "sync.syncing": "Sincronizando…",
+  "sync.conflict": "Este navegador e o Supabase têm versões diferentes do banco.",
+  "sync.localSummary": "Neste navegador: {count} fatos · {date}",
+  "sync.remoteSummary": "No Supabase: {count} fatos · {date}",
+  "sync.unknownDate": "data indisponível",
+  "sync.keepLocal": "Manter a deste navegador",
+  "sync.useRemote": "Usar a do Supabase",
+  "sync.replaceConfirm": "Substituir o banco deste navegador pela versão do Supabase?",
+  "sync.retry": "Tentar de novo",
+  "sync.error.invalid_url": "Informe uma URL HTTPS válida (HTTP só para localhost ou 127.0.0.1).",
+  "sync.error.missing_key": "Informe a chave pública do projeto.",
+  "sync.error.secret_key":
+    "Chave secreta rejeitada. Use somente a chave pública anon ou publishable, nunca service_role.",
+  "sync.error.network": "Não foi possível conectar ao Supabase. Confira sua conexão.",
+  "sync.error.auth":
+    "Acesso não autorizado. Saia e entre novamente; confira a chave pública e as políticas RLS.",
+  "sync.error.not_configured": "Configure a conexão com o Supabase.",
+  "sync.error.table_missing":
+    "A tabela fact_banks não existe. Execute docs/supabase.sql no SQL Editor do seu projeto.",
+  "sync.error.invalid_remote": "O banco do Supabase é inválido. Nenhum dado foi substituído.",
+  "sync.error.invalid_local": "O banco local é inválido. Exporte o conteúdo original antes de recomeçar.",
+  "sync.error.storage": "Não foi possível salvar neste navegador. Libere espaço ou permita o armazenamento.",
+  "sync.error.api": "O Supabase retornou um erro. Tente novamente.",
   "field.version": "Versão",
   "field.archived": "Arquivado",
   "field.kind": "Tipo de fato",
@@ -284,6 +319,40 @@ const ptBR = {
 };
 
 const en: Record<keyof typeof ptBR, string> = {
+  "sync.connect": "Connect Supabase",
+  "sync.url": "Project URL",
+  "sync.key": "Public key (anon or publishable)",
+  "sync.keyHint": "Never use the secret key (service_role).",
+  "sync.help": "Setup guide",
+  "sync.sendLink": "Send sign-in link",
+  "sync.sent": "We sent a link to {email}. Open it in this browser.",
+  "sync.connected": "Connected as {email}",
+  "sync.synced": "Synced at {time}",
+  "sync.now": "Sync now",
+  "sync.signOut": "Sign out",
+  "sync.remove": "Remove connection",
+  "sync.syncing": "Syncing…",
+  "sync.conflict": "This browser and Supabase have different versions of the bank.",
+  "sync.localSummary": "This browser: {count} facts · {date}",
+  "sync.remoteSummary": "Supabase: {count} facts · {date}",
+  "sync.unknownDate": "date unavailable",
+  "sync.keepLocal": "Keep this browser’s version",
+  "sync.useRemote": "Use Supabase’s version",
+  "sync.replaceConfirm": "Replace this browser’s bank with the Supabase version?",
+  "sync.retry": "Try again",
+  "sync.error.invalid_url": "Enter a valid HTTPS URL (HTTP only for localhost or 127.0.0.1).",
+  "sync.error.missing_key": "Enter the project's public key.",
+  "sync.error.secret_key":
+    "Secret key rejected. Use only the public anon or publishable key, never service_role.",
+  "sync.error.network": "Could not connect to Supabase. Check your connection.",
+  "sync.error.auth": "Access denied. Sign out and back in; check the public key and RLS policies.",
+  "sync.error.not_configured": "Configure the Supabase connection.",
+  "sync.error.table_missing":
+    "The fact_banks table is missing. Run docs/supabase.sql in your project's SQL Editor.",
+  "sync.error.invalid_remote": "The Supabase bank is invalid. No data was replaced.",
+  "sync.error.invalid_local": "The local bank is invalid. Export the original content before starting over.",
+  "sync.error.storage": "Could not save in this browser. Free up space or allow storage.",
+  "sync.error.api": "Supabase returned an error. Try again.",
   "field.version": "Version",
   "field.archived": "Archived",
   "field.kind": "Fact kind",
@@ -672,5 +741,10 @@ export function useI18n(): I18n {
 }
 
 export function resumePresent(locale: Locale): string {
-  return (locale === "pt-BR" ? ptBR : en)["review.present"];
+  return resumeT(locale, "review.present");
+}
+
+/** Texto no idioma do currículo, que pode ser diferente do da interface. */
+export function resumeT(locale: Locale, key: TranslationKey): string {
+  return (locale === "pt-BR" ? ptBR : en)[key];
 }

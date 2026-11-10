@@ -51,6 +51,8 @@ Your fact bank stays in the browser's `localStorage`. There is no account, proje
 
 The job description, old resume text and facts used in LLM requests go directly to your chosen provider. Check that provider's terms before sending your data. With local Ollama, the destination is your own machine.
 
+If you turn on Supabase sync (optional), the bank also goes to **your own** Supabase project, protected by sign-in and RLS; Encaixe has no access to it. See [docs/supabase.md](docs/supabase.md).
+
 Use **Export JSON** to back up your fact bank. Browser storage is no substitute for your own copy.
 
 ## Status
@@ -69,8 +71,7 @@ In development. Follow the [roadmap](https://github.com/users/DiegoCard117/proje
 - [x] GitHub Pages deployment on every push to `main`
 - [x] Old resume import (pasted text, PDF or TXT): the LLM transcribes facts, the app flags numbers and skills missing from the source, and each fact enters the bank only after confirmation
 - [x] CLI to validate a bank, check a draft and see job fit (`pnpm cli`)
-
-A remote bank using Supabase is planned. It is not available yet.
+- [x] Optional sync across devices in your own Supabase project ([setup guide, in Portuguese](docs/supabase.md))
 
 ### CLI
 

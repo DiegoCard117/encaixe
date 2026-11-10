@@ -51,6 +51,8 @@ O banco de fatos fica no navegador, em `localStorage`. Não há conta, servidor 
 
 O texto da vaga, o texto do currículo antigo e os fatos usados nas chamadas vão diretamente ao provedor de LLM escolhido. Confira os termos desse provedor antes de enviar seus dados. Com Ollama local, o destino é sua própria máquina.
 
+Se você ligar a sincronização com o Supabase (opcional), o banco também vai para o **seu** projeto Supabase, protegido por login e RLS; o Encaixe não tem acesso. Veja [docs/supabase.md](docs/supabase.md).
+
 Use **Exportar JSON** para manter um backup do banco de fatos. O armazenamento do navegador não substitui uma cópia sua.
 
 ## Status
@@ -70,8 +72,7 @@ Em desenvolvimento. Acompanhe o [roadmap](https://github.com/users/DiegoCard117/
 - [x] Importação de currículo antigo (texto colado, PDF ou TXT): a LLM transcreve os fatos, o app aponta números e skills que
       não estão no texto e cada fato só entra no banco depois de confirmado
 - [x] CLI para validar o banco, checar um rascunho e ver a aderência (`pnpm cli`)
-
-Banco remoto com Supabase está planejado. Ainda não está disponível.
+- [x] Sincronização opcional entre dispositivos no seu próprio projeto Supabase ([como configurar](docs/supabase.md))
 
 ### CLI
 

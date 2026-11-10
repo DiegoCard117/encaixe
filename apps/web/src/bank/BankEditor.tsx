@@ -8,6 +8,8 @@ import { download, Errors, factTitle, Modal } from "./ui";
 import ProfileForm from "./ProfileForm";
 import FactForm from "./FactForm";
 import ImportResume from "./ImportResume";
+import { useSync } from "../sync/useSync";
+import SyncCard from "../sync/SyncCard";
 
 type Editing = { kind: "profile" } | { kind: FactKind; fact?: Fact; contextId?: string };
 export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => void }) {
@@ -18,6 +20,10 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
   const [importingResume, setImportingResume] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [saveFailed, setSaveFailed] = useState(false);
+  const sync = useSync((pulled) => {
+    setStored({ status: "ok", bank: pulled });
+    setSaveFailed(false);
+  });
   const [blocked, setBlocked] = useState<string[]>([]);
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -32,6 +38,7 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
         (issue) => `${describePath(issue.path, t, candidate)}: ${tIssue(issue)}`,
       );
     const saved = saveBank(result.data);
+    if (saved) sync.afterLocalSave(result.data);
     setStored({ status: "ok", bank: result.data });
     setSaveFailed(!saved);
     setErrors([]);
@@ -291,6 +298,9 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
           >
             {t("editor.example")}
           </button>
+          <div className="mt-5">
+            <SyncCard sync={sync} />
+          </div>
         </>
       ) : (
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.5fr)]">
@@ -320,13 +330,7 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
                 {t("editor.editProfile")}
               </button>
             </section>
-            <section className="bank-card space-y-3">
-              <h3 className="font-display font-semibold">{t("editor.remote")}</h3>
-              <p className="text-sm text-muted">{t("editor.remoteHelp")}</p>
-              <button className="bank-button" type="button" disabled aria-disabled="true">
-                {t("editor.soon")}
-              </button>
-            </section>
+            <SyncCard sync={sync} />
           </aside>
           <div className="min-w-0 space-y-8">
             {(["experience", "project", "education", "skill"] as const).map((kind) => (

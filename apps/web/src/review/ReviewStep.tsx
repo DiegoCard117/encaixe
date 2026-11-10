@@ -6,7 +6,7 @@ import {
   type ResumeDraft,
   type Violation,
 } from "@encaixe/core";
-import { resumePresent, useI18n } from "../i18n";
+import { resumePresent, resumeT, useI18n } from "../i18n";
 import { highlight } from "../highlight";
 import { describePath } from "../paths";
 import { loadDraft, saveDraft, useGeneration, type SavedDraft } from "../generation";
@@ -106,6 +106,8 @@ function EditableText({
     </div>
   );
 }
+
+const shortUrl = (url: string) => url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
 
 function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
   const { t, locale: uiLocale, tViolation } = useI18n();
@@ -231,6 +233,24 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
                 .filter(Boolean)
                 .join(" · ")}
             </p>
+            {resume.profile.links.length > 0 && (
+              <p className="break-words text-sm">
+                {resume.profile.links.map((link, i) => (
+                  <span key={i}>
+                    {i > 0 && " · "}
+                    {link.label}:{" "}
+                    <a
+                      className="underline underline-offset-2"
+                      href={link.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {shortUrl(link.url)}
+                    </a>
+                  </span>
+                ))}
+              </p>
+            )}
             {draft.headline ? (
               <EditableText
                 key={`headline-${draft.headline.text}`}
@@ -265,7 +285,7 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
           {(["experiences", "projects"] as const).map((section) => (
             <section key={section} className="space-y-4">
               <h4 className="font-display text-lg font-semibold">
-                {t(section === "experiences" ? "editor.experience" : "editor.project")}
+                {resumeT(locale, section === "experiences" ? "editor.experience" : "editor.project")}
               </h4>
               {draft[section].map((entry, entryIndex) => {
                 const experience =
@@ -287,6 +307,23 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
                       )}
                     </h5>
                     {source?.period && <p className="text-sm">{period(source.period)}</p>}
+                    {project && (project.url || project.repositoryUrl) && (
+                      <p className="break-words text-sm">
+                        {[project.url, project.repositoryUrl].filter(Boolean).map((url, i) => (
+                          <span key={url}>
+                            {i > 0 && " · "}
+                            <a
+                              className="underline underline-offset-2"
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {shortUrl(url!)}
+                            </a>
+                          </span>
+                        ))}
+                      </p>
+                    )}
                     <ul className="space-y-2">
                       {entry.bullets.map((bullet, bulletIndex) => (
                         <li key={bulletIndex}>
@@ -338,13 +375,13 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
           ))}
           {resume.skills.length > 0 && (
             <section>
-              <h4 className="font-display text-lg font-semibold">{t("editor.skill")}</h4>
+              <h4 className="font-display text-lg font-semibold">{resumeT(locale, "editor.skill")}</h4>
               <p>{resume.skills.map((skill) => skill.name).join(" · ")}</p>
             </section>
           )}
           {resume.education.length > 0 && (
             <section className="space-y-3">
-              <h4 className="font-display text-lg font-semibold">{t("editor.education")}</h4>
+              <h4 className="font-display text-lg font-semibold">{resumeT(locale, "editor.education")}</h4>
               {resume.education.map((education, i) => (
                 <div key={`${i}-${education.factId}`} className="resume-entry">
                   <h5 className="font-semibold">
