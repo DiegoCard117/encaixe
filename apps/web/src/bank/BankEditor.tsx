@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { FactBankSchema, createEmptyFactBank, referencesTo, type Fact, type FactKind } from "@encaixe/core";
+import { FactBankSchema, createEmptyFactBank, removeFact, type Fact, type FactKind } from "@encaixe/core";
 import { sampleBank } from "@encaixe/core/fixtures";
 import { useI18n } from "../i18n";
 import { describePath } from "../paths";
@@ -28,7 +28,6 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
     setStored({ status: "ok", bank: pulled });
     setSaveFailed(false);
   });
-  const [blocked, setBlocked] = useState<string[]>([]);
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
     onSaved(stored.status === "ok" && !saveFailed);
@@ -46,7 +45,6 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
     setStored({ status: "ok", bank: result.data });
     setSaveFailed(!saved);
     setErrors([]);
-    setBlocked([]);
     return [];
   }
 
@@ -81,17 +79,19 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
 
   function remove(fact: Fact) {
     if (!bank) return;
-    const refs = referencesTo(bank, fact.id);
-    if (refs.length) {
-      setBlocked(refs);
-      setErrors([]);
-      return;
-    }
-    if (window.confirm(t("editor.deleteConfirm", { id: fact.id }))) {
-      const issues = commit({ ...bank, facts: bank.facts.filter((f) => f.id !== fact.id) });
-      setErrors(issues);
-      if (!issues.length) setEditing(undefined);
-    }
+    // Exclui em cascata o que depende do fato e tira o vínculo de quem só cita a skill.
+    const result = removeFact(bank, fact.id);
+    const message = [
+      t("editor.deleteConfirm", { title: factTitle(fact) }),
+      result.removed.length > 1 ? t("editor.deleteCascade", { count: result.removed.length - 1 }) : "",
+      result.unlinked.length ? t("editor.deleteUnlink", { count: result.unlinked.length }) : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    if (!window.confirm(message)) return;
+    const issues = commit(result.bank);
+    setErrors(issues);
+    if (!issues.length) setEditing(undefined);
   }
 
   function factCard(fact: Fact, nested = false) {
@@ -265,19 +265,6 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
         <p role="alert" className="bank-errors mb-5">
           {t("editor.storageError")}
         </p>
-      )}
-      {blocked.length > 0 && (
-        <div role="alert" className="bank-errors mb-5">
-          <p>{t("editor.blocked")}</p>
-          <ul>
-            {blocked.map((id) => (
-              <li key={id}>
-                <span className="font-mono">{id}</span> ·{" "}
-                {bank?.facts.find((f) => f.id === id) && factTitle(bank.facts.find((f) => f.id === id)!)}
-              </li>
-            ))}
-          </ul>
-        </div>
       )}
       {!bank ? (
         <>
@@ -475,21 +462,6 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
                 {editing.fact && (
                   <div className="mt-5 border-t border-line pt-4">
                     <Errors errors={errors} />
-                    {blocked.length > 0 && (
-                      <div role="alert" className="bank-errors">
-                        <p>{t("editor.blocked")}</p>
-                        <ul>
-                          {blocked.map((id) => (
-                            <li key={id} className="break-words [overflow-wrap:anywhere]">
-                              {(() => {
-                                const fact = bank.facts.find((candidate) => candidate.id === id);
-                                return fact ? factTitle(fact) : id;
-                              })()}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"

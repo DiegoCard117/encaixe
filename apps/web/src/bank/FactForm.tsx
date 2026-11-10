@@ -15,7 +15,7 @@ import {
   type FactBank,
 } from "@encaixe/core";
 import { useI18n, type TranslationKey } from "../i18n";
-import { Errors } from "./ui";
+import { Errors, factTitle } from "./ui";
 import { describePath } from "../paths";
 
 const schemas = {
@@ -138,7 +138,6 @@ export default function FactForm({
         },
       )}
     >
-      <p className="break-all font-mono text-sm text-muted">{initial.id}</p>
       {fields[kind].map((name) => (
         <label key={name}>
           {label(name)}
@@ -194,7 +193,13 @@ export default function FactForm({
       {kind === "achievement" && (
         <p className="break-all text-sm">
           {t("field.contextId")}:{" "}
-          <span className="font-mono">{"contextId" in initial ? initial.contextId : contextId}</span>
+          <span>
+            {(() => {
+              const id = "contextId" in initial ? initial.contextId : contextId;
+              const parent = bank.facts.find((fact) => fact.id === id);
+              return parent ? factTitle(parent) : id;
+            })()}
+          </span>
         </p>
       )}
       {(["experience", "project", "education"] as FactKind[]).includes(kind) && (
@@ -249,8 +254,7 @@ export default function FactForm({
             .map((skill) => (
               <label className="bank-check" key={skill.id}>
                 <input type="checkbox" value={skill.id} {...register("skillIds")} />
-                {skill.kind === "skill" && skill.name}{" "}
-                <span className="font-mono text-xs text-muted">{skill.id}</span>
+                {skill.kind === "skill" && skill.name}
               </label>
             ))}
         </fieldset>

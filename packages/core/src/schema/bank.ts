@@ -114,6 +114,32 @@ export function indexFacts(bank: FactBank): ReadonlyMap<string, Fact> {
 }
 
 /** Ids dos fatos que apontam para `factId` (via contextId ou skillIds). */
+/**
+ * Exclui um fato sem deixar referência quebrada: os fatos que dependem dele pelo contexto
+ * (conquistas de uma experiência, projetos de uma formação…) saem junto, em cascata;
+ * quem só cita a skill perde o vínculo e continua no banco.
+ */
+export function removeFact(
+  bank: FactBank,
+  factId: string,
+): { bank: FactBank; removed: string[]; unlinked: string[] } {
+  const removed = new Set([factId]);
+  for (let size = 0; size !== removed.size;) {
+    size = removed.size;
+    for (const fact of bank.facts)
+      if ("contextId" in fact && fact.contextId && removed.has(fact.contextId)) removed.add(fact.id);
+  }
+  const unlinked: string[] = [];
+  const facts = bank.facts
+    .filter((fact) => !removed.has(fact.id))
+    .map((fact) => {
+      if (!("skillIds" in fact) || !fact.skillIds.some((id) => removed.has(id))) return fact;
+      unlinked.push(fact.id);
+      return { ...fact, skillIds: fact.skillIds.filter((id) => !removed.has(id)) };
+    });
+  return { bank: { ...bank, facts }, removed: [...removed], unlinked };
+}
+
 export function referencesTo(bank: FactBank, factId: string): string[] {
   return bank.facts
     .filter(

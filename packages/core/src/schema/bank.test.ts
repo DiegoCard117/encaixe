@@ -180,3 +180,26 @@ describe("docs/exemplo-banco-de-fatos.json", () => {
     expect(FactBankSchema.parse(exampleBank)).toEqual(FactBankSchema.parse(sampleBank));
   });
 });
+
+import { removeFact } from "./bank";
+
+describe("removeFact", () => {
+  const bank = FactBankSchema.parse(sampleBank);
+
+  it("exclui a experiência com as conquistas dela e mantém o banco válido", () => {
+    const result = removeFact(bank, "exp_coop-dev");
+    expect(result.removed).toEqual(["exp_coop-dev", "ach_automacao-credito"]);
+    expect(result.unlinked).toEqual([]);
+    expect(FactBankSchema.safeParse(result.bank).success).toBe(true);
+  });
+
+  it("exclui a skill e só tira o vínculo dos fatos que a citam", () => {
+    const result = removeFact(bank, "skl_django");
+    expect(result.removed).toEqual(["skl_django"]);
+    expect(result.unlinked).toEqual(["exp_coop-dev", "prj_balance"]);
+    expect(result.bank.facts.find((fact) => fact.id === "prj_balance")).toMatchObject({
+      skillIds: ["skl_postgresql"],
+    });
+    expect(FactBankSchema.safeParse(result.bank).success).toBe(true);
+  });
+});
