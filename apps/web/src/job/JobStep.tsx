@@ -30,7 +30,8 @@ export default function JobStep({ bank }: { bank: FactBank }) {
           </label>
           <textarea
             id="job-text"
-            className="rounded-lg border border-line bg-bg p-3 text-ink min-h-80 w-full resize-y"
+            // Cresce com o texto colado (field-sizing) entre 60% e 80% da tela; acima disso rola por dentro.
+            className="max-h-[80dvh] min-h-[60dvh] w-full resize-y rounded-lg border border-line bg-bg p-3 text-ink [field-sizing:content]"
             rows={16}
             value={jobText}
             disabled={generation.busy}
