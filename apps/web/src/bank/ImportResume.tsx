@@ -115,6 +115,7 @@ export default function ImportResume({
   const [statuses, setStatuses] = useState<Record<string, Status>>(restored?.statuses ?? {});
   const [profileStatus, setProfileStatus] = useState<Status>(restored?.profileStatus ?? "pending");
   const [hasEdits, setHasEdits] = useState(restored?.hasEdits ?? false);
+  const [expandedDecided, setExpandedDecided] = useState<Record<string, boolean>>({});
   useEffect(() => {
     if (!extraction) return;
     try {
@@ -266,6 +267,12 @@ export default function ImportResume({
     if (!bank && profileStatus === "pending") setProfileStatus("confirmed");
   }
   const confirmed = facts.filter((fact) => statuses[fact.id] === "confirmed");
+  function isDecided(fact: Fact): boolean {
+    return (
+      (statuses[fact.id] === "confirmed" || statuses[fact.id] === "discarded") &&
+      facts.filter((child) => "contextId" in child && child.contextId === fact.id).every(isDecided)
+    );
+  }
   function save() {
     if (!extraction || (!bank && profileStatus !== "confirmed")) return;
     const base = bank ?? { ...createEmptyFactBank(extraction.profile), locale: extraction.locale };
@@ -586,13 +593,66 @@ export default function ImportResume({
                 fact.kind === kind &&
                 (fact.kind !== "achievement" || !facts.some((parent) => parent.id === fact.contextId)),
             );
+            const collapsible = kind === "experience" || kind === "project" || kind === "education";
+            const decided = collapsible ? items.filter(isDecided) : [];
+            const visible = collapsible ? items.filter((fact) => !isDecided(fact)) : items;
+            const unsupportedSkills =
+              kind === "skill" ? items.filter((fact) => alerts.get(fact.id)?.length).map(factTitle) : [];
             return (
               items.length > 0 && (
                 <section key={kind} className="min-w-0 space-y-3">
                   <h3 className="font-display text-lg">
                     {t(`editor.${kind}`)} · {items.length}
                   </h3>
-                  {items.map((fact) => factCard(fact))}
+                  {kind === "skill" ? (
+                    <>
+                      <div className="flex flex-wrap gap-2">
+                        {items.map((fact) => {
+                          const selected = statuses[fact.id] === "confirmed";
+                          return (
+                            <button
+                              key={fact.id}
+                              type="button"
+                              className={`min-h-10 max-w-full break-words rounded-full border px-3 text-sm [overflow-wrap:anywhere] ${alerts.get(fact.id)?.length ? "border-warn-line" : "border-line"} ${selected ? "bg-accent-soft text-accent-ink" : ""}`}
+                              aria-pressed={selected}
+                              onClick={() =>
+                                selected
+                                  ? undo(fact.id)
+                                  : setStatuses({ ...statuses, [fact.id]: "confirmed" })
+                              }
+                            >
+                              {selected && <span aria-hidden="true">✓ </span>}
+                              {factTitle(fact)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {unsupportedSkills.length > 0 && (
+                        <p className="break-words text-xs text-warn-ink [overflow-wrap:anywhere]">
+                          {t("import.unsupported", { values: unsupportedSkills.join(", ") })}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    visible.map((fact) => factCard(fact))
+                  )}
+                  {decided.length > 0 && (
+                    <div>
+                      <button
+                        type="button"
+                        className="min-h-10 text-sm text-muted"
+                        aria-expanded={!!expandedDecided[kind]}
+                        onClick={() =>
+                          setExpandedDecided((current) => ({ ...current, [kind]: !current[kind] }))
+                        }
+                      >
+                        {t("import.decidedCount", { count: decided.length })}
+                      </button>
+                      {expandedDecided[kind] && (
+                        <div className="mt-3 space-y-3">{decided.map((fact) => factCard(fact))}</div>
+                      )}
+                    </div>
+                  )}
                 </section>
               )
             );

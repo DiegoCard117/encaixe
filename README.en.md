@@ -53,7 +53,7 @@ The job description, old resume text and facts used in LLM requests go directly 
 
 If you turn on Supabase sync (optional), the bank also goes to **your own** Supabase project, protected by sign-in and RLS; Encaixe has no access to it. See [docs/supabase.md](docs/supabase.md).
 
-To wipe everything from this browser, use **Delete everything from this browser** in the fact bank's danger zone (optionally also deleting your bank in Supabase).
+To wipe everything from this browser, use **Delete everything from this browser** under **Settings** › Danger zone in the fact bank (optionally also deleting your bank in Supabase).
 
 Use **Export JSON** to back up your fact bank. Browser storage is no substitute for your own copy.
 

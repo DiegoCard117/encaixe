@@ -53,7 +53,7 @@ O texto da vaga, o texto do currículo antigo e os fatos usados nas chamadas vã
 
 Se você ligar a sincronização com o Supabase (opcional), o banco também vai para o **seu** projeto Supabase, protegido por login e RLS; o Encaixe não tem acesso. Veja [docs/supabase.md](docs/supabase.md).
 
-Para apagar tudo deste navegador, use **Apagar tudo deste navegador** na zona de perigo do banco de fatos (com opção de apagar também o banco no Supabase).
+Para apagar tudo deste navegador, use **Apagar tudo deste navegador** em **Configurações** › Zona de perigo, no banco de fatos (com opção de apagar também o banco no Supabase).
 
 Use **Exportar JSON** para manter um backup do banco de fatos. O armazenamento do navegador não substitui uma cópia sua.
 

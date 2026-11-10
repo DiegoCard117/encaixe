@@ -19,6 +19,9 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
   const bank = stored.status === "ok" ? stored.bank : undefined;
   const [editing, setEditing] = useState<Editing>();
   const [importingResume, setImportingResume] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [expandedAchievements, setExpandedAchievements] = useState<Record<string, boolean>>({});
+  const sections = useRef<Partial<Record<FactKind, HTMLElement | null>>>({});
   const [errors, setErrors] = useState<string[]>([]);
   const [saveFailed, setSaveFailed] = useState(false);
   const sync = useSync((pulled) => {
@@ -85,22 +88,33 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
       return;
     }
     if (window.confirm(t("editor.deleteConfirm", { id: fact.id }))) {
-      setErrors(commit({ ...bank, facts: bank.facts.filter((f) => f.id !== fact.id) }));
+      const issues = commit({ ...bank, facts: bank.facts.filter((f) => f.id !== fact.id) });
+      setErrors(issues);
+      if (!issues.length) setEditing(undefined);
     }
   }
 
   function factCard(fact: Fact, nested = false) {
+    const achievements = bank?.facts.filter((f) => f.kind === "achievement" && f.contextId === fact.id) ?? [];
     return (
-      <article className={nested ? "bank-card mt-3 bg-bg" : "bank-card"} key={fact.id}>
+      <article
+        className={
+          nested
+            ? "ml-3 min-w-0 border-l border-line pl-3"
+            : "min-w-0 rounded-xl border border-line bg-surface p-4"
+        }
+        key={fact.id}
+      >
         <div className="flex flex-wrap items-center gap-2">
-          <p className="break-all font-mono text-xs text-accent-ink">{fact.id}</p>
+          <h4 className="min-w-0 break-words font-display font-medium [overflow-wrap:anywhere]">
+            {factTitle(fact)}
+          </h4>
           {fact.archived && (
             <span className="rounded-full bg-accent-soft px-2 py-1 text-xs text-accent-ink">
               {t("editor.archived")}
             </span>
           )}
         </div>
-        <h4 className="mt-2 break-words font-display font-medium">{factTitle(fact)}</h4>
         {"period" in fact && fact.period && (
           <p className="mt-2 text-sm text-muted">
             {new Intl.DateTimeFormat(locale, { month: "short", year: "numeric", timeZone: "UTC" }).format(
@@ -114,57 +128,56 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
                 )}
           </p>
         )}
-        {fact.kind === "project" && <p className="mt-2 break-words text-sm text-muted">{fact.description}</p>}
+        {fact.kind === "project" && (
+          <p className="mt-1 line-clamp-2 break-words text-sm text-muted [overflow-wrap:anywhere]">
+            {fact.description}
+          </p>
+        )}
         {fact.kind === "experience" && fact.summary && (
-          <p className="mt-2 break-words text-sm text-muted">{fact.summary}</p>
+          <p className="mt-1 line-clamp-2 break-words text-sm text-muted [overflow-wrap:anywhere]">
+            {fact.summary}
+          </p>
         )}
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
             className="bank-button"
-            aria-label={`${t("editor.edit")} · ${fact.id}`}
+            aria-label={`${t("editor.edit")} · ${factTitle(fact)}`}
             onClick={() => setEditing({ kind: fact.kind, fact })}
           >
             {t("editor.edit")}
-          </button>
-          <button
-            type="button"
-            className="bank-button"
-            aria-label={`${t(fact.archived ? "editor.unarchive" : "editor.archive")} · ${fact.id}`}
-            onClick={() =>
-              bank &&
-              setErrors(
-                commit({
-                  ...bank,
-                  facts: bank.facts.map((f) => (f.id === fact.id ? { ...f, archived: !f.archived } : f)),
-                }),
-              )
-            }
-          >
-            {t(fact.archived ? "editor.unarchive" : "editor.archive")}
-          </button>
-          <button
-            type="button"
-            className="bank-button"
-            aria-label={`${t("editor.delete")} · ${fact.id}`}
-            onClick={() => remove(fact)}
-          >
-            {t("editor.delete")}
           </button>
           {fact.kind !== "skill" && fact.kind !== "achievement" && (
             <button
               type="button"
               className="bank-button text-accent-ink"
-              aria-label={`${t("editor.addAchievement")} · ${fact.id}`}
+              aria-label={`${t("editor.addAchievement")} · ${factTitle(fact)}`}
               onClick={() => setEditing({ kind: "achievement", contextId: fact.id })}
             >
               {t("editor.addAchievement")}
             </button>
           )}
         </div>
-        {bank?.facts
-          .filter((f) => f.kind === "achievement" && f.contextId === fact.id)
-          .map((achievement) => factCard(achievement, true))}
+        {achievements.length > 0 && (
+          <div className="mt-2">
+            <button
+              type="button"
+              className="min-h-10 text-sm text-muted"
+              aria-expanded={!!expandedAchievements[fact.id]}
+              aria-label={`${t("editor.achievementCount", { count: achievements.length })} · ${factTitle(fact)}`}
+              onClick={() =>
+                setExpandedAchievements((current) => ({ ...current, [fact.id]: !current[fact.id] }))
+              }
+            >
+              {t("editor.achievementCount", { count: achievements.length })}
+            </button>
+            {expandedAchievements[fact.id] && (
+              <div className="mt-2 space-y-3">
+                {achievements.map((achievement) => factCard(achievement, true))}
+              </div>
+            )}
+          </div>
+        )}
       </article>
     );
   }
@@ -227,7 +240,7 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
           <p className="mt-2 text-sm text-muted">{t("editor.intro")}</p>
         </div>
         {bank && (
-          <div className="flex flex-wrap gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
             <button
               type="button"
               className="bank-button"
@@ -240,6 +253,9 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
             </button>
             <button type="button" className="bank-button" onClick={() => setImportingResume(true)}>
               {t("import.title")}
+            </button>
+            <button type="button" className="bank-button" onClick={() => setSettingsOpen(true)}>
+              {t("editor.settings")}
             </button>
           </div>
         )}
@@ -305,38 +321,59 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
         </>
       ) : (
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.5fr)]">
-          <aside className="space-y-5">
-            <section className="bank-card space-y-3">
-              <h3 className="font-display text-lg font-semibold">{bank.profile.fullName}</h3>
-              {bank.profile.headline && <p className="break-words">{bank.profile.headline}</p>}
-              {[bank.profile.email, bank.profile.phone, bank.profile.location]
-                .filter(Boolean)
-                .map((value, index) => (
-                  <p key={index} className="break-words text-sm text-muted">
-                    {value}
-                  </p>
+          <aside className="min-w-0">
+            <section className="space-y-1 rounded-xl border border-line bg-surface p-4">
+              <h3 className="break-words font-display text-lg font-semibold [overflow-wrap:anywhere]">
+                {bank.profile.fullName}
+              </h3>
+              {bank.profile.headline && (
+                <p className="break-words text-sm [overflow-wrap:anywhere]">{bank.profile.headline}</p>
+              )}
+              <div className="break-words text-sm text-muted [overflow-wrap:anywhere]">
+                {[bank.profile.email, bank.profile.phone, bank.profile.location].filter(Boolean).join(" · ")}
+                {bank.profile.links.map((link, i) => (
+                  <span key={i}>
+                    {(i > 0 || bank.profile.email || bank.profile.phone || bank.profile.location) && " · "}
+                    <a
+                      className="inline-flex min-h-10 max-w-full items-center text-accent-ink underline"
+                      href={link.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <span className="min-w-0 break-words [overflow-wrap:anywhere]">{link.label}</span>
+                    </a>
+                  </span>
                 ))}
-              {bank.profile.links.map((link, i) => (
-                <a
-                  className="block min-h-10 break-words text-sm text-accent-ink underline"
-                  key={i}
-                  href={link.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {link.label}
-                </a>
-              ))}
+              </div>
               <button type="button" className="bank-button" onClick={() => setEditing({ kind: "profile" })}>
                 {t("editor.editProfile")}
               </button>
             </section>
-            <SyncCard sync={sync} />
-            <DangerZone bank={bank} />
           </aside>
           <div className="min-w-0 space-y-8">
+            <div className="sticky top-0 z-10 overflow-x-auto bg-bg py-2">
+              <div className="flex gap-2">
+                {(["experience", "project", "education", "skill"] as const).map((kind) => (
+                  <button
+                    key={kind}
+                    type="button"
+                    className="bank-button shrink-0"
+                    onClick={() => sections.current[kind]?.scrollIntoView({ block: "start" })}
+                  >
+                    {t(`editor.${kind}`)} · {bank.facts.filter((fact) => fact.kind === kind).length}
+                  </button>
+                ))}
+              </div>
+            </div>
             {(["experience", "project", "education", "skill"] as const).map((kind) => (
-              <section key={kind} aria-labelledby={`section-${kind}`}>
+              <section
+                key={kind}
+                ref={(element) => {
+                  sections.current[kind] = element;
+                }}
+                className="scroll-mt-20"
+                aria-labelledby={`section-${kind}`}
+              >
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <h3 id={`section-${kind}`} className="font-display text-xl font-semibold">
                     {t(`editor.${kind}`)}
@@ -350,9 +387,25 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
                     {t("editor.add")}
                   </button>
                 </div>
-                <div className="space-y-3">
+                <div className={kind === "skill" ? "flex flex-wrap gap-2" : "space-y-3"}>
                   {bank.facts.some((f) => f.kind === kind) ? (
-                    bank.facts.filter((f) => f.kind === kind).map((fact) => factCard(fact))
+                    bank.facts
+                      .filter((f) => f.kind === kind)
+                      .map((fact) =>
+                        kind === "skill" ? (
+                          <button
+                            key={fact.id}
+                            type="button"
+                            className={`min-h-10 max-w-full break-words rounded-full border border-line px-3 text-sm [overflow-wrap:anywhere] ${fact.archived ? "border-dashed opacity-60" : ""}`}
+                            aria-label={`${t("editor.edit")} · ${factTitle(fact)}${fact.archived ? ` · ${t("editor.archived")}` : ""}`}
+                            onClick={() => setEditing({ kind: "skill", fact })}
+                          >
+                            {factTitle(fact)}
+                          </button>
+                        ) : (
+                          factCard(fact)
+                        ),
+                      )
                   ) : (
                     <p className="bank-card text-sm text-muted">{t("editor.empty")}</p>
                   )}
@@ -361,6 +414,14 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
             ))}
           </div>
         </div>
+      )}
+      {bank && settingsOpen && (
+        <Modal title={t("editor.settings")} onClose={() => setSettingsOpen(false)}>
+          <div className="space-y-5">
+            <SyncCard sync={sync} />
+            <DangerZone bank={bank} />
+          </div>
+        </Modal>
       )}
       {importingResume && (
         <ImportResume bank={bank} onSave={commit} onClose={() => setImportingResume(false)} />
@@ -392,24 +453,72 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
             />
           ) : (
             bank && (
-              <FactForm
-                bank={bank}
-                kind={editing.kind}
-                fact={editing.fact}
-                contextId={editing.contextId}
-                onCancel={() => setEditing(undefined)}
-                onSave={(fact) => {
-                  const next = {
-                    ...bank,
-                    facts: editing.fact
-                      ? bank.facts.map((f) => (f.id === fact.id ? fact : f))
-                      : [...bank.facts, fact],
-                  };
-                  const issues = commit(next);
-                  if (!issues.length) setEditing(undefined);
-                  return issues;
-                }}
-              />
+              <>
+                <FactForm
+                  bank={bank}
+                  kind={editing.kind}
+                  fact={editing.fact}
+                  contextId={editing.contextId}
+                  onCancel={() => setEditing(undefined)}
+                  onSave={(fact) => {
+                    const next = {
+                      ...bank,
+                      facts: editing.fact
+                        ? bank.facts.map((f) => (f.id === fact.id ? fact : f))
+                        : [...bank.facts, fact],
+                    };
+                    const issues = commit(next);
+                    if (!issues.length) setEditing(undefined);
+                    return issues;
+                  }}
+                />
+                {editing.fact && (
+                  <div className="mt-5 border-t border-line pt-4">
+                    <Errors errors={errors} />
+                    {blocked.length > 0 && (
+                      <div role="alert" className="bank-errors">
+                        <p>{t("editor.blocked")}</p>
+                        <ul>
+                          {blocked.map((id) => (
+                            <li key={id} className="break-words [overflow-wrap:anywhere]">
+                              {(() => {
+                                const fact = bank.facts.find((candidate) => candidate.id === id);
+                                return fact ? factTitle(fact) : id;
+                              })()}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="bank-button"
+                        onClick={() => {
+                          const fact = editing.fact!;
+                          const issues = commit({
+                            ...bank,
+                            facts: bank.facts.map((f) =>
+                              f.id === fact.id ? { ...f, archived: !f.archived } : f,
+                            ),
+                          });
+                          setErrors(issues);
+                          if (!issues.length) setEditing(undefined);
+                        }}
+                      >
+                        {t(editing.fact.archived ? "editor.unarchive" : "editor.archive")}
+                      </button>
+                      <button
+                        type="button"
+                        className="bank-button border-warn-line text-warn-ink"
+                        onClick={() => remove(editing.fact!)}
+                      >
+                        {t("editor.delete")}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )
           )}
         </Modal>
