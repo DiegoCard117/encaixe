@@ -17,12 +17,13 @@ Em desenvolvimento. Acompanhe o [roadmap](https://github.com/users/DiegoCard117/
 - [x] Playground do checador no navegador
 - [x] Tema claro/escuro e interface em português e inglês
 - [x] Aderência fato × vaga: skills que batem, lacunas e fatos mais relevantes
-- [ ] Geração com LLM, editor do banco de fatos, exportação em PDF
+- [x] Prompt e validação da resposta da LLM (sem depender de provedor) e renderização do currículo com dados reais
+- [ ] Editor do banco de fatos, geração no navegador, exportação em PDF
 
 ## Estrutura
 
 ```
-packages/core   lógica pura: schema zod, checador anti-invenção, aderência (geração a caminho) — sem UI, disco ou rede
+packages/core   lógica pura: schema zod, checador anti-invenção, aderência, prompt/parsing da LLM e renderização — sem UI, disco ou rede
 apps/web        interface principal, React + Vite + Tailwind, 100% no navegador
 apps/cli        casca fina sobre o core (depois da web)
 docs/           decisões de arquitetura, produto, user flow e identidade visual
