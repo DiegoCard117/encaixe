@@ -172,3 +172,11 @@ describeReferences("referencesTo", () => {
     expectReferences(findReferences(referenceBank, "edu_ads")).toEqual([]);
   });
 });
+
+import exampleBank from "../../../../docs/exemplo-banco-de-fatos.json";
+
+describe("docs/exemplo-banco-de-fatos.json", () => {
+  it("é um banco válido e igual ao fixture", () => {
+    expect(FactBankSchema.parse(exampleBank)).toEqual(FactBankSchema.parse(sampleBank));
+  });
+});
