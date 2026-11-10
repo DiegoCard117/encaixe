@@ -14,6 +14,7 @@ import {
   saveLastSync,
   saveSyncConfig,
   sendMagicLink,
+  signInWithPassword,
   signOut,
   SyncError,
   syncError,
@@ -226,6 +227,16 @@ export function useSync(onPulled: (bank: FactBank) => void) {
     async verifyCode(email: string, token: string): Promise<boolean> {
       try {
         await verifyCode(email, token);
+        await sync();
+        return true;
+      } catch (error) {
+        setState({ status: "error", ...pickError(error) });
+        return false;
+      }
+    },
+    async signInWithPassword(email: string, password: string): Promise<boolean> {
+      try {
+        await signInWithPassword(email, password);
         await sync();
         return true;
       } catch (error) {

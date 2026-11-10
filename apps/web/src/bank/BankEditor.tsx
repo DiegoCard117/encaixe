@@ -20,6 +20,16 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
   const [editing, setEditing] = useState<Editing>();
   const [importingResume, setImportingResume] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("encaixe.openSettings") === "1") {
+        if (bank) setSettingsOpen(true);
+        sessionStorage.removeItem("encaixe.openSettings");
+      }
+    } catch {
+      /* Settings can still be opened manually when storage is unavailable. */
+    }
+  }, [bank]);
   const [expandedAchievements, setExpandedAchievements] = useState<Record<string, boolean>>({});
   const sections = useRef<Partial<Record<FactKind, HTMLElement | null>>>({});
   const [errors, setErrors] = useState<string[]>([]);

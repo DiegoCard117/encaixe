@@ -8,6 +8,7 @@ export type SyncErrorCode =
   | ConfigError
   | "network"
   | "auth"
+  | "invalid_credentials"
   | "not_configured"
   | "table_missing"
   | "invalid_remote"
@@ -68,6 +69,20 @@ export function loadSyncConfig(): SyncConfig | undefined {
     /* Storage may be unavailable. */
   }
 }
+export function connectionLink(config: SyncConfig, email?: string): string {
+  return `${location.origin}${location.pathname}#/conectar?u=${encodeURIComponent(config.url)}&k=${encodeURIComponent(config.key)}${email ? `&e=${encodeURIComponent(email)}` : ""}`;
+}
+
+export function readConnectionLink(hash: string): { config: SyncConfig; email?: string } | undefined {
+  if (!hash.startsWith("#/conectar?")) return;
+  const params = new URLSearchParams(hash.slice("#/conectar?".length));
+  const config = { url: (params.get("u") ?? "").trim(), key: (params.get("k") ?? "").trim() };
+  if (validateConfig(config.url, config.key)) return;
+  const email = params.get("e");
+  if (email !== null && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+  return email === null ? { config } : { config, email };
+}
+
 export function saveSyncConfig(config: SyncConfig): boolean {
   if (validateConfig(config.url, config.key)) return false;
   try {
@@ -140,6 +155,11 @@ export function syncError(error: unknown): SyncError {
   if (value?.status === 429 || /rate.?limit/i.test(`${value?.code ?? ""} ${message}`))
     return new SyncError("rate_limit", detail);
   if (
+    value?.status === 400 &&
+    (value?.code === "invalid_credentials" || /Invalid login credentials/i.test(message))
+  )
+    return new SyncError("invalid_credentials", detail);
+  if (
     value?.status === 401 ||
     value?.status === 403 ||
     value?.code === "42501" ||
@@ -203,6 +223,26 @@ export async function currentEmail(): Promise<string | undefined> {
     throw syncError(error);
   }
 }
+export async function setPassword(password: string): Promise<void> {
+  try {
+    const client = await configuredClient();
+    const { error } = await client.auth.updateUser({ password });
+    if (error) throw error;
+  } catch (error) {
+    throw syncError(error);
+  }
+}
+
+export async function signInWithPassword(email: string, password: string): Promise<void> {
+  try {
+    const client = await configuredClient();
+    const { error } = await client.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+  } catch (error) {
+    throw syncError(error);
+  }
+}
+
 export async function verifyCode(email: string, token: string): Promise<void> {
   try {
     const client = await configuredClient();

@@ -4,13 +4,17 @@ import { FactBankSchema } from "@encaixe/core";
 import {
   clearLastSync,
   clearSyncConfig,
+  connectionLink,
   fetchRemote,
   getClient,
   loadLastSync,
   loadSyncConfig,
   pushRemote,
+  readConnectionLink,
   saveLastSync,
   saveSyncConfig,
+  setPassword,
+  signInWithPassword,
   syncError,
   validateConfig,
   verifyCode,
@@ -20,6 +24,8 @@ const mock = vi.hoisted(() => ({
   createClient: vi.fn(),
   getUser: vi.fn(),
   verifyOtp: vi.fn(),
+  updateUser: vi.fn(),
+  signInWithPassword: vi.fn(),
   maybeSingle: vi.fn(),
   single: vi.fn(),
   from: vi.fn(),
@@ -48,7 +54,12 @@ beforeEach(() => {
   mock.eq.mockReturnValue({ maybeSingle: mock.maybeSingle });
   mock.upsert.mockReturnValue({ select: mock.select });
   mock.createClient.mockReturnValue({
-    auth: { getUser: mock.getUser, verifyOtp: mock.verifyOtp },
+    auth: {
+      getUser: mock.getUser,
+      verifyOtp: mock.verifyOtp,
+      updateUser: mock.updateUser,
+      signInWithPassword: mock.signInWithPassword,
+    },
     from: mock.from,
   });
 });
@@ -58,6 +69,33 @@ afterEach(() => {
 });
 
 describe("public project configuration", () => {
+  it("round-trips connection details in the fragment without session tokens", () => {
+    vi.stubGlobal("location", { origin: "https://encaixe.test", pathname: "/app/" });
+    const email = "ana+work@example.com";
+    const link = new URL(connectionLink(config, email));
+    expect(link.origin + link.pathname).toBe("https://encaixe.test/app/");
+    expect(link.search).toBe("");
+    expect(link.hash).toBe(
+      `#/conectar?u=${encodeURIComponent(config.url)}&k=${encodeURIComponent(config.key)}&e=${encodeURIComponent(email)}`,
+    );
+    expect(readConnectionLink(link.hash)).toEqual({ config, email });
+    expect(readConnectionLink(new URL(connectionLink(config)).hash)).toEqual({ config });
+  });
+  it("rejects secret keys, invalid URLs, and invalid emails in connection links", () => {
+    const hash = (url: string, key: string) =>
+      `#/conectar?u=${encodeURIComponent(url)}&k=${encodeURIComponent(key)}`;
+    const serviceRole = `header.${btoa(JSON.stringify({ role: "service_role" }))}.signature`;
+    expect(readConnectionLink(hash(config.url, "sb_secret_private"))).toBeUndefined();
+    expect(readConnectionLink(hash(config.url, serviceRole))).toBeUndefined();
+    expect(readConnectionLink(hash("invalid", config.key))).toBeUndefined();
+    expect(readConnectionLink(hash("http://example.com", config.key))).toBeUndefined();
+    expect(readConnectionLink(hash(config.url, ""))).toBeUndefined();
+    expect(readConnectionLink(`${hash(config.url, config.key)}&e=invalid`)).toBeUndefined();
+  });
+  it("ignores hashes outside the connection route and incomplete links", () => {
+    for (const hash of ["", "#/", "#/vaga", "#/conectar", "#/conectar?", "#/conectar/other?u=x&k=y"])
+      expect(readConnectionLink(hash)).toBeUndefined();
+  });
   it("accepts HTTPS and local HTTP only", () => {
     expect(validateConfig(config.url, config.key)).toBeUndefined();
     expect(validateConfig("http://localhost:54321", "anon")).toBeUndefined();
@@ -126,6 +164,38 @@ describe("public project configuration", () => {
 describe("remote boundary", () => {
   beforeEach(() => {
     saveSyncConfig(config);
+  });
+  it("sets the password and preserves Supabase error details", async () => {
+    mock.updateUser.mockResolvedValue({ error: null });
+    await setPassword("password123");
+    expect(mock.updateUser).toHaveBeenCalledWith({ password: "password123" });
+    mock.updateUser.mockResolvedValue({ error: { status: 422, message: "Password is too weak" } });
+    await expect(setPassword("password123")).rejects.toMatchObject({
+      code: "api",
+      detail: expect.stringContaining("Password is too weak"),
+    });
+  });
+  it("signs in with a password and distinguishes invalid credentials", async () => {
+    mock.signInWithPassword.mockResolvedValue({ error: null });
+    await signInWithPassword("ana@example.com", "password123");
+    expect(mock.signInWithPassword).toHaveBeenCalledWith({
+      email: "ana@example.com",
+      password: "password123",
+    });
+    for (const error of [
+      { status: 400, code: "invalid_credentials" },
+      { status: 400, name: "AuthApiError", message: "Invalid login credentials" },
+    ]) {
+      mock.signInWithPassword.mockResolvedValue({ error });
+      await expect(signInWithPassword("ana@example.com", "wrong")).rejects.toMatchObject({
+        code: "invalid_credentials",
+        detail: expect.any(String),
+      });
+    }
+    mock.signInWithPassword.mockRejectedValue(new TypeError("Failed to fetch"));
+    await expect(signInWithPassword("ana@example.com", "password123")).rejects.toMatchObject({
+      code: "network",
+    });
   });
   it("verifies the email code and maps authentication and network errors", async () => {
     mock.verifyOtp.mockResolvedValue({ error: null });

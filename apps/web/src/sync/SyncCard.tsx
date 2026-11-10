@@ -1,7 +1,15 @@
 import { useState } from "react";
 import { Modal } from "../bank/ui";
 import { useI18n } from "../i18n";
-import { validateConfig, type ConfigError } from "./supabase";
+import {
+  connectionLink,
+  loadSyncConfig,
+  setPassword,
+  syncError,
+  validateConfig,
+  type ConfigError,
+  type SyncError,
+} from "./supabase";
 import type { useSync } from "./useSync";
 
 export default function SyncCard({ sync }: { sync: ReturnType<typeof useSync> }) {
@@ -9,7 +17,21 @@ export default function SyncCard({ sync }: { sync: ReturnType<typeof useSync> })
   const [dialog, setDialog] = useState(false);
   const [url, setUrl] = useState("");
   const [key, setKey] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => {
+    try {
+      return sessionStorage.getItem("encaixe.connectEmail") ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const [loginMode, setLoginMode] = useState<"email" | "password">("email");
+  const [loginAttempted, setLoginAttempted] = useState(false);
+  const [password, setLoginPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [passwordError, setPasswordError] = useState<SyncError>();
+  const [copied, setCopied] = useState<boolean>();
   const [sent, setSent] = useState<string>();
   const [token, setToken] = useState("");
   const [sending, setSending] = useState(false);
@@ -31,15 +53,42 @@ export default function SyncCard({ sync }: { sync: ReturnType<typeof useSync> })
           </button>
         </>
       )}
-      {(state.status === "signed_out" || (state.status === "error" && !!sent)) && (
+      {(state.status === "signed_out" || (state.status === "error" && (!!sent || loginAttempted))) && (
         <>
+          <div className="flex flex-wrap gap-2">
+            {(["email", "password"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                className="bank-button whitespace-normal"
+                aria-pressed={loginMode === mode}
+                disabled={sending}
+                onClick={() => setLoginMode(mode)}
+              >
+                {t(mode === "email" ? "sync.emailLogin" : "sync.passwordLogin")}
+              </button>
+            ))}
+          </div>
           <form
             className="space-y-3"
             onSubmit={(event) => {
               event.preventDefault();
               if (sending) return;
               const address = email.trim();
+              setLoginAttempted(true);
               setSending(true);
+              if (loginMode === "password") {
+                void sync
+                  .signInWithPassword(address, password)
+                  .then((ok) => {
+                    if (ok) {
+                      setLoginPassword("");
+                      setLoginAttempted(false);
+                    }
+                  })
+                  .finally(() => setSending(false));
+                return;
+              }
               void sync
                 .sendLink(address)
                 .then((ok) => {
@@ -62,16 +111,29 @@ export default function SyncCard({ sync }: { sync: ReturnType<typeof useSync> })
                 onChange={(event) => setEmail(event.target.value)}
               />
             </label>
+            {loginMode === "password" && (
+              <label className="block">
+                {t("sync.password")}
+                <input
+                  className={inputClass}
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(event) => setLoginPassword(event.target.value)}
+                />
+              </label>
+            )}
             <button type="submit" className="bank-button" disabled={sending}>
-              {t("sync.sendLink")}
+              {t(loginMode === "password" ? "sync.signIn" : "sync.sendLink")}
             </button>
-            {sent && (
+            {sent && loginMode === "email" && (
               <p role="status" className="text-sm">
                 {t("sync.sent", { email: sent })}
               </p>
             )}
           </form>
-          {sent && (
+          {sent && loginMode === "email" && (
             <form
               className="space-y-3"
               onSubmit={(event) => {
@@ -122,6 +184,77 @@ export default function SyncCard({ sync }: { sync: ReturnType<typeof useSync> })
             >
               {t("sync.signOut")}
             </button>
+          </div>
+          <form
+            className="space-y-3 border-t border-line pt-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (passwordSaving || newPassword.length < 8) return;
+              setPasswordSaving(true);
+              setPasswordSaved(false);
+              setPasswordError(undefined);
+              void setPassword(newPassword)
+                .then(() => {
+                  setNewPassword("");
+                  setPasswordSaved(true);
+                })
+                .catch((error: unknown) => setPasswordError(syncError(error)))
+                .finally(() => setPasswordSaving(false));
+            }}
+          >
+            <h4 className="font-medium">{t("sync.passwordHeading")}</h4>
+            <label className="block">
+              {t("sync.newPassword")}
+              <input
+                className={inputClass}
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                required
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+              />
+            </label>
+            <button type="submit" className="bank-button" disabled={passwordSaving}>
+              {t("sync.setPassword")}
+            </button>
+            <p role="status" className="text-sm">
+              {passwordSaved ? t("sync.passwordSaved") : ""}
+            </p>
+            {passwordError && (
+              <div role="alert" className="bank-errors">
+                <p>{t(`sync.error.${passwordError.code}`)}</p>
+                {passwordError.detail && (
+                  <p className="break-words font-mono text-xs">
+                    {t("sync.detail")} {passwordError.detail}
+                  </p>
+                )}
+              </div>
+            )}
+          </form>
+          <div className="space-y-3 border-t border-line pt-3">
+            <h4 className="font-medium">{t("sync.connectionHeading")}</h4>
+            <p className="text-sm text-muted">{t("sync.connectionHelp")}</p>
+            <button
+              type="button"
+              className="bank-button whitespace-normal"
+              onClick={async () => {
+                setCopied(undefined);
+                try {
+                  const config = loadSyncConfig();
+                  if (!config) throw new Error("not_configured");
+                  await navigator.clipboard.writeText(connectionLink(config, state.email));
+                  setCopied(true);
+                } catch {
+                  setCopied(false);
+                }
+              }}
+            >
+              {t("sync.copyConnection")}
+            </button>
+            <p role="status" className="text-sm">
+              {copied === undefined ? "" : t(copied ? "sync.connectionCopied" : "sync.connectionCopyFailed")}
+            </p>
           </div>
         </>
       )}
