@@ -271,7 +271,11 @@ export function createCallLlm(
   return async (messages) => {
     const skipped: { model: string; code: LlmErrorCode }[] = [];
     let firstError: LlmError | undefined;
-    for (const model of new Set([settings.model, ...(settings.fallbackModels ?? [])])) {
+    const queue = [...new Set([settings.model, ...(settings.fallbackModels ?? [])])];
+    // Sem plano B salvo (configuração antiga ou modelo digitado à mão): monta na primeira falha.
+    let discovered = queue.length > 1;
+    for (let i = 0; i < queue.length; i++) {
+      const model = queue[i]!;
       let result: string;
       try {
         result = await createModelCall({ ...settings, model }, signal)(messages);
@@ -280,6 +284,21 @@ export function createCallLlm(
           throw error;
         firstError ??= error;
         skipped.push({ model, code: error.code });
+        if (!discovered) {
+          discovered = true;
+          try {
+            const ranked = rankModels(
+              await listModels(settings, signal),
+              settings.provider,
+              settings.baseUrl,
+            );
+            const fallbacks = pickFallbacks(ranked, settings.model);
+            queue.push(...fallbacks.filter((id) => !queue.includes(id)));
+            if (fallbacks.length) saveLlmSettings({ ...settings, fallbackModels: fallbacks });
+          } catch {
+            /* Sem lista de modelos: fica o erro original. */
+          }
+        }
         continue;
       }
       onModel?.(model, skipped);

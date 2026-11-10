@@ -168,6 +168,29 @@ describe("createCallLlm", () => {
     ]);
   });
 
+  it("monta o plano B na hora quando a configuração não tem um (caso real: config antiga)", async () => {
+    const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith("/models"))
+        return Response.json({
+          data: [
+            { id: "models/gemini-3.8-flash" },
+            { id: "models/gemini-3.6-flash" },
+            { id: "models/gemini-3.5-flash-lite" },
+          ],
+        });
+      const model = JSON.parse(String(init?.body)).model;
+      return model === "gemini-3.5-flash-lite" ? success() : failure(503, "High demand", true);
+    });
+    vi.stubGlobal("fetch", fetch);
+    const onModel = vi.fn();
+    const old = { ...settings, model: "gemini-3.8-flash", fallbackModels: [] };
+    await expect(createCallLlm(old, undefined, onModel)(messages)).resolves.toBe("{}");
+    expect(onModel).toHaveBeenCalledWith("gemini-3.5-flash-lite", [
+      { model: "gemini-3.8-flash", code: "overloaded" },
+      { model: "gemini-3.6-flash", code: "overloaded" },
+    ]);
+  });
+
   it.each([401, 429, 500])("does not try fallback for status %s", async (status) => {
     const fetch = vi.fn().mockResolvedValue(failure(status, "Request failed"));
     vi.stubGlobal("fetch", fetch);
