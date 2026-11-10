@@ -15,7 +15,7 @@ import {
   type SkillFact,
 } from "@encaixe/core";
 import { useLlmTask } from "../generation";
-import { useI18n, type TranslationKey } from "../i18n";
+import { useI18n } from "../i18n";
 import FactForm from "./FactForm";
 import ProfileForm from "./ProfileForm";
 import { Errors, factTitle, Modal } from "./ui";
@@ -103,7 +103,7 @@ export default function ImportResume({
   onSave: (bank: FactBank) => string[];
   onClose: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const llm = useLlmTask();
   const fileInput = useRef<HTMLInputElement>(null);
   const [restored] = useState(loadReview);
@@ -235,6 +235,21 @@ export default function ImportResume({
       ...Object.fromEntries([...discarded].map((key) => [key, "discarded" as const])),
     }));
   }
+  function undo(id: string) {
+    const next = { ...statuses, [id]: "pending" as const };
+    // A confirmed child must return to pending when its parent is no longer confirmed.
+    let changed: boolean;
+    do {
+      changed = false;
+      for (const fact of facts) {
+        if (next[fact.id] === "confirmed" && !canConfirm(fact, next)) {
+          next[fact.id] = "pending";
+          changed = true;
+        }
+      }
+    } while (changed);
+    setStatuses(next);
+  }
   function confirmAll() {
     const next = { ...statuses };
     let changed: boolean;
@@ -281,123 +296,172 @@ export default function ImportResume({
     confirm: () => void,
     edit: () => void,
     remove: () => void,
+    reset: () => void,
     disabled = false,
     hint?: string,
+    undoDisabled = false,
   ) {
     return (
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="text-sm text-muted">{t(`import.${status}`)}</span>
-        <span title={hint}>
+      <div className="mt-3">
+        <div className={status === "discarded" ? "grid" : "grid grid-cols-3 gap-2"}>
           <button
             type="button"
-            className="bank-button"
-            disabled={disabled || status !== "pending"}
-            aria-label={t("import.confirmItem", { title: name })}
-            onClick={confirm}
+            className="bank-button min-w-0 px-1 text-center"
+            disabled={status === "discarded" ? undoDisabled : status === "pending" && disabled}
+            aria-label={t(status === "pending" ? "import.confirmItem" : "import.undoItem", { title: name })}
+            onClick={status === "pending" ? confirm : reset}
           >
-            {t("import.confirm")}
+            {t(status === "pending" ? "import.confirm" : "import.undo")}
           </button>
-        </span>
-        <button
-          type="button"
-          className="bank-button"
-          disabled={status === "discarded"}
-          aria-label={t("import.editItem", { title: name })}
-          onClick={edit}
-        >
-          {t("editor.edit")}
-        </button>
-        <button
-          type="button"
-          className="bank-button"
-          disabled={status === "discarded"}
-          aria-label={t("import.discardItem", { title: name })}
-          onClick={remove}
-        >
-          {t("import.discard")}
-        </button>
-        {hint && <p className="w-full text-sm text-muted">{hint}</p>}
+          {status !== "discarded" && (
+            <>
+              <button
+                type="button"
+                className="bank-button min-w-0 px-1 text-center"
+                aria-label={t("import.editItem", { title: name })}
+                onClick={edit}
+              >
+                {t("editor.edit")}
+              </button>
+              <button
+                type="button"
+                className="bank-button min-w-0 px-1 text-center"
+                aria-label={t("import.discardItem", { title: name })}
+                onClick={remove}
+              >
+                {t("import.discard")}
+              </button>
+            </>
+          )}
+        </div>
+        {hint && <p className="mt-2 break-words text-xs text-muted">{hint}</p>}
       </div>
+    );
+  }
+
+  function statusBadge(status: Status) {
+    return (
+      <span
+        className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${
+          status === "confirmed" ? "bg-accent-soft text-accent-ink" : "bg-bg text-muted"
+        }`}
+      >
+        {t(`import.${status}`)}
+      </span>
+    );
+  }
+
+  function formatMonth(value: string) {
+    return new Intl.DateTimeFormat(locale, { month: "short", year: "numeric", timeZone: "UTC" }).format(
+      new Date(`${value}-01T00:00:00Z`),
     );
   }
 
   function factCard(fact: Fact, nested = false) {
     const name = factTitle(fact);
+    const status = statuses[fact.id] ?? "pending";
     const warnings = alerts.get(fact.id) ?? [];
-    const parent = parentOf(fact);
+    const parent =
+      "contextId" in fact
+        ? [...(bank?.facts ?? []), ...facts].find((item) => item.id === fact.contextId)
+        : undefined;
+    const parentDiscarded =
+      !!parent && !bank?.facts.some((item) => item.id === parent.id) && statuses[parent.id] === "discarded";
     const hint =
-      !canConfirm(fact) && parent ? t("import.parentFirst", { title: factTitle(parent) }) : undefined;
+      parentDiscarded && parent
+        ? t("import.undoParentFirst", { title: factTitle(parent) })
+        : !canConfirm(fact) && parent
+          ? t("import.parentFirst", { title: factTitle(parent) })
+          : undefined;
+    const metadata: string[] = [];
+    if ("period" in fact && fact.period) {
+      metadata.push(
+        `${formatMonth(fact.period.start)} – ${fact.period.end === null ? t("import.current") : formatMonth(fact.period.end)}`,
+      );
+    }
+    if (fact.kind === "education") metadata.push(t(`enum.${fact.type}`), t(`enum.${fact.status}`));
+    if (fact.kind === "experience") {
+      if (fact.employmentType) metadata.push(t(`enum.${fact.employmentType}`));
+      if (fact.workMode) metadata.push(t(`enum.${fact.workMode}`));
+      if (fact.location) metadata.push(fact.location);
+    }
+    if (fact.kind === "skill") {
+      metadata.push(t(`enum.${fact.category}`));
+      if (fact.level) metadata.push(t(`enum.${fact.level}`));
+      metadata.push(...fact.aliases);
+    }
+    if (fact.kind === "achievement" && fact.date) metadata.push(formatMonth(fact.date));
+    if (fact.kind === "project" && fact.role) metadata.push(fact.role);
+    if (parent && !nested) metadata.push(factTitle(parent));
+    const description =
+      fact.kind === "experience" ? fact.summary : fact.kind === "project" ? fact.description : undefined;
     return (
-      <article key={fact.id} className={`bank-card space-y-3 ${nested ? "mt-3 bg-bg" : ""}`}>
-        <h4 className="break-words font-display font-medium">{name}</h4>
-        <dl className="space-y-2 break-words text-sm">
-          {parent && (
-            <div>
-              <dt className="text-muted">{t("field.contextId")}</dt>
-              <dd>{factTitle(parent)}</dd>
+      <div key={fact.id} className="min-w-0">
+        <article
+          className={`min-w-0 ${nested ? "ml-3 border-l pl-3" : "rounded-xl border p-4"} ${status === "confirmed" ? "border-accent" : "border-line"} ${status === "discarded" ? "opacity-60" : ""}`}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <h4
+              className={`min-w-0 break-words font-medium [overflow-wrap:anywhere] ${status === "discarded" ? "line-through" : ""}`}
+            >
+              {name}
+            </h4>
+            {statusBadge(status)}
+          </div>
+          {metadata.length > 0 && (
+            <p className="mt-1 break-words text-sm text-muted [overflow-wrap:anywhere]">
+              {metadata.join(" · ")}
+            </p>
+          )}
+          {description && (
+            <p className="mt-2 line-clamp-3 break-words whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">
+              {description}
+            </p>
+          )}
+          {fact.kind === "achievement" && fact.metrics.length > 0 && (
+            <p className="mt-2 break-words text-sm [overflow-wrap:anywhere]">
+              {fact.metrics
+                .map((metric) => `${metric.value}${metric.unit ?? ""} · ${metric.label}`)
+                .join(" · ")}
+            </p>
+          )}
+          {"skillIds" in fact && fact.skillIds.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {fact.skillIds.map((id) => (
+                <span
+                  key={id}
+                  className="max-w-full break-words rounded-full border border-line px-2 py-0.5 text-xs [overflow-wrap:anywhere]"
+                >
+                  {skills.get(id)?.name ?? id}
+                </span>
+              ))}
             </div>
           )}
-          {Object.entries(fact)
-            .filter(
-              ([key, value]) =>
-                !["id", "kind", "archived", "contextId"].includes(key) &&
-                !(fact.kind === "achievement" && key === "text") &&
-                value !== undefined &&
-                (!Array.isArray(value) || value.length > 0),
-            )
-            .map(([key, value]) => {
-              let display: string;
-              if (key === "period" && "period" in fact && fact.period) {
-                display = `${fact.period.start} – ${fact.period.end ?? t("editor.current")}`;
-              } else if (key === "metrics" && fact.kind === "achievement") {
-                display = fact.metrics
-                  .map((metric) => `${metric.value}${metric.unit ?? ""} · ${metric.label}`)
-                  .join("; ");
-              } else if (key === "skillIds" && "skillIds" in fact) {
-                display = fact.skillIds.map((id) => skills.get(id)?.name ?? id).join(", ");
-              } else if (
-                ["category", "level", "type", "status", "employmentType", "workMode"].includes(key)
-              ) {
-                display = t(`enum.${value}` as TranslationKey);
-              } else {
-                display = Array.isArray(value) ? value.join(", ") : String(value);
-              }
-              return (
-                <div key={key}>
-                  <dt className="text-muted">
-                    {t(
-                      (key === "period"
-                        ? "import.period"
-                        : key === "metrics"
-                          ? "editor.metrics"
-                          : `field.${key}`) as TranslationKey,
-                    )}
-                  </dt>
-                  <dd className="whitespace-pre-wrap">{display}</dd>
-                </div>
-              );
-            })}
-        </dl>
-        {warnings.length > 0 && (
-          <p role="alert" className="rounded-lg border border-current p-3 text-sm text-warn-ink">
-            {t("import.unsupported", {
-              values: [...new Set(warnings.map((warning) => warning.value))].join(", "),
-            })}
-          </p>
-        )}
-        {actions(
-          name,
-          statuses[fact.id] ?? "pending",
-          () => setStatuses({ ...statuses, [fact.id]: "confirmed" }),
-          () => setEditing(fact),
-          () => discard(fact.id),
-          !canConfirm(fact),
-          hint,
-        )}
-        {facts
-          .filter((child) => child.kind === "achievement" && child.contextId === fact.id)
-          .map((child) => factCard(child, true))}
-      </article>
+          {warnings.length > 0 && (
+            <p role="alert" className="mt-2 break-words text-xs text-warn-ink [overflow-wrap:anywhere]">
+              {t("import.unsupported", {
+                values: [...new Set(warnings.map((warning) => warning.value))].join(", "),
+              })}
+            </p>
+          )}
+          {actions(
+            name,
+            status,
+            () => setStatuses({ ...statuses, [fact.id]: "confirmed" }),
+            () => setEditing(fact),
+            () => discard(fact.id),
+            () => undo(fact.id),
+            !canConfirm(fact),
+            hint,
+            parentDiscarded,
+          )}
+        </article>
+        <div className="mt-3 space-y-3 empty:hidden">
+          {facts
+            .filter((child) => child.kind === "achievement" && child.contextId === fact.id)
+            .map((child) => factCard(child, true))}
+        </div>
+      </div>
     );
   }
 
@@ -446,64 +510,11 @@ export default function ImportResume({
           {llm.controls}
         </div>
       ) : (
-        <div className="space-y-5">
-          <p className="text-sm text-muted">{t("import.review")}</p>
-          {dropped > 0 && (
-            <p role="status" className="text-warn-ink">
-              {t("import.dropped", { count: dropped })}
-            </p>
-          )}
-          <button type="button" className="bank-button" onClick={confirmAll}>
-            {t("import.confirmAll")}
-          </button>
-          {!bank && (
-            <section className="bank-card space-y-3">
-              <h3 className="font-display text-lg">{t("editor.profile")}</h3>
-              <p>{extraction.profile.fullName}</p>
-              {[
-                extraction.profile.headline,
-                extraction.profile.email,
-                extraction.profile.phone,
-                extraction.profile.location,
-              ]
-                .filter(Boolean)
-                .map((value, index) => (
-                  <p key={index} className="break-words text-sm">
-                    {value}
-                  </p>
-                ))}
-              {extraction.profile.links.map((link, index) => (
-                <p key={index} className="break-words text-sm">
-                  {link.label}
-                  {" · "}
-                  {link.url}
-                </p>
-              ))}
-              <p className="text-sm">
-                {t("field.locale")}
-                {": "}
-                {t(`enum.${extraction.locale}`)}
-              </p>
-              {actions(
-                extraction.profile.fullName,
-                profileStatus,
-                () => setProfileStatus("confirmed"),
-                () => setEditing("profile"),
-                () => setProfileStatus("discarded"),
-              )}
-            </section>
-          )}
-          {(["experience", "project", "education", "skill"] as const).map((kind) => (
-            <section key={kind} className="space-y-3">
-              <h3 className="font-display text-lg">{t(`editor.${kind}`)}</h3>
-              {facts.filter((fact) => fact.kind === kind).map((fact) => factCard(fact))}
-            </section>
-          ))}
-          <p className="text-sm text-muted">{t("import.pendingHelp")}</p>
-          <div className="flex flex-wrap gap-2">
+        <div className="min-w-0 space-y-5">
+          <div>
             <button
               type="button"
-              className="bank-button"
+              className="min-h-10 text-sm text-muted underline underline-offset-4"
               onClick={() => {
                 if (
                   (hasEdits ||
@@ -521,18 +532,90 @@ export default function ImportResume({
             >
               {t("import.back")}
             </button>
-            <button
-              type="button"
-              className="bank-button bg-accent-soft text-accent-ink"
-              disabled={(!bank && profileStatus !== "confirmed") || (!!bank && !confirmed.length)}
-              onClick={save}
-            >
-              {t("import.add", { count: confirmed.length })}
-            </button>
+            <p role="status" className="text-sm font-medium">
+              {t("import.progress", {
+                count: confirmed.length + (!bank && profileStatus === "confirmed" ? 1 : 0),
+                total: facts.length + (bank ? 0 : 1),
+              })}
+            </p>
+            {dropped > 0 && (
+              <p role="status" className="mt-1 text-xs text-warn-ink">
+                {t("import.dropped", { count: dropped })}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-muted">{t("import.review")}</p>
           </div>
-          {!bank && profileStatus !== "confirmed" && (
-            <p className="text-sm text-muted">{t("import.confirmProfile")}</p>
+          {!bank && (
+            <section
+              aria-label={t("editor.profile")}
+              className={`min-w-0 rounded-xl border p-4 ${profileStatus === "confirmed" ? "border-accent" : "border-line"} ${profileStatus === "discarded" ? "opacity-60" : ""}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <h3
+                  className={`min-w-0 break-words font-medium [overflow-wrap:anywhere] ${profileStatus === "discarded" ? "line-through" : ""}`}
+                >
+                  {extraction.profile.fullName}
+                </h3>
+                {statusBadge(profileStatus)}
+              </div>
+              <p className="mt-1 break-words text-sm text-muted [overflow-wrap:anywhere]">
+                {[
+                  extraction.profile.headline,
+                  extraction.profile.email,
+                  extraction.profile.phone,
+                  extraction.profile.location,
+                  ...extraction.profile.links.map((link) => `${link.label} · ${link.url}`),
+                  t(`enum.${extraction.locale}`),
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+              {actions(
+                extraction.profile.fullName,
+                profileStatus,
+                () => setProfileStatus("confirmed"),
+                () => setEditing("profile"),
+                () => setProfileStatus("discarded"),
+                () => setProfileStatus("pending"),
+              )}
+            </section>
           )}
+          {(["experience", "project", "education", "skill", "achievement"] as const).map((kind) => {
+            const items = facts.filter(
+              (fact) =>
+                fact.kind === kind &&
+                (fact.kind !== "achievement" || !facts.some((parent) => parent.id === fact.contextId)),
+            );
+            return (
+              items.length > 0 && (
+                <section key={kind} className="min-w-0 space-y-3">
+                  <h3 className="font-display text-lg">
+                    {t(`editor.${kind}`)} · {items.length}
+                  </h3>
+                  {items.map((fact) => factCard(fact))}
+                </section>
+              )
+            );
+          })}
+          <div className="sticky bottom-0 z-10 -mx-5 border-t border-line bg-surface px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:-mx-7 sm:px-7">
+            <p className="text-xs text-muted">{t("import.pendingHelp")}</p>
+            {!bank && profileStatus !== "confirmed" && (
+              <p className="mt-1 text-xs text-muted">{t("import.confirmProfile")}</p>
+            )}
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <button type="button" className="bank-button min-w-0 text-center" onClick={confirmAll}>
+                {t("import.confirmAll")}
+              </button>
+              <button
+                type="button"
+                className="bank-button min-w-0 bg-accent-soft text-center text-accent-ink"
+                disabled={(!bank && profileStatus !== "confirmed") || (!!bank && !confirmed.length)}
+                onClick={save}
+              >
+                {t("import.add", { count: confirmed.length })}
+              </button>
+            </div>
+          </div>
         </div>
       )}
       <Errors errors={errors} />
