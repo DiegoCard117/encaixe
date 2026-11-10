@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   analyzeFit,
   generateResumeDraft,
@@ -231,6 +231,14 @@ export function useLlmTask() {
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const locked = useRef(false);
+  const controller = useRef<AbortController | undefined>(undefined);
+  useEffect(
+    () => () => {
+      controller.current?.abort();
+      controller.current = undefined;
+    },
+    [],
+  );
   const [error, setError] = useState<TranslationKey>();
   const [dialog, setDialog] = useState<"configure" | "generate">();
   const settingsRef = useRef<LlmSettings | undefined>(undefined);
@@ -238,15 +246,25 @@ export function useLlmTask() {
   async function execute(settings: LlmSettings, task: (callLlm: CallLlm) => Promise<void>) {
     if (locked.current) return;
     locked.current = true;
+    const execution = new AbortController();
+    controller.current = execution;
     setBusy(true);
     setError(undefined);
     try {
-      await task(createCallLlm(settings));
+      await task(createCallLlm(settings, execution.signal));
     } catch (cause) {
-      setError(cause instanceof LlmError ? `generation.${cause.code}` : "generation.api");
+      if (controller.current !== execution || execution.signal.aborted) return;
+      if (cause instanceof LlmError) {
+        if (cause.code !== "canceled") setError(`generation.${cause.code}`);
+      } else {
+        setError("generation.api");
+      }
     } finally {
       locked.current = false;
-      setBusy(false);
+      if (controller.current === execution) {
+        controller.current = undefined;
+        setBusy(false);
+      }
     }
   }
   function run(task: (callLlm: CallLlm) => Promise<void>) {
@@ -271,6 +289,11 @@ export function useLlmTask() {
         >
           {t("llm.configure")}
         </button>
+        {busy && (
+          <button type="button" className="bank-button min-h-10" onClick={() => controller.current?.abort()}>
+            {t("editor.cancel")}
+          </button>
+        )}
         {error && (
           <div role="alert" className="bank-errors">
             <p>{t(error)}</p>

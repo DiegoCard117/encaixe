@@ -6,6 +6,28 @@ import { VALIDATION_CODES, type ValidationCode } from "../../../packages/core/sr
 export type Locale = "pt-BR" | "en";
 
 const ptBR = {
+  "field.version": "Versão",
+  "field.archived": "Arquivado",
+  "field.kind": "Tipo de fato",
+  "field.id": "ID",
+  "field.factId": "Fato",
+  "field.period": "Período",
+  "field.facts": "Fatos",
+  "field.profile": "Perfil",
+  "field.links": "Links",
+  "field.metrics": "Métricas",
+  "path.educationIds": "Formação",
+  "path.skillIds": "Skills",
+  "path.sourceFactIds": "fonte",
+  "path.bullets": "item",
+  "path.projects": "Projeto",
+  "path.experiences": "Experiência",
+  "path.headline": "Título",
+  "page.playground": "Playground do checador",
+  "page.review": "Revisão",
+  "page.job": "Vaga e aderência",
+  "generation.timeout": "O provedor não respondeu em 5 minutos. Tente de novo ou use um modelo menor.",
+  "import.discardReview": "Descartar a revisão atual?",
   "import.title": "Importar currículo",
   "import.text": "Cole o texto do currículo ou do LinkedIn",
   "import.file": "Abrir arquivo PDF ou TXT",
@@ -252,6 +274,28 @@ const ptBR = {
 };
 
 const en: Record<keyof typeof ptBR, string> = {
+  "field.version": "Version",
+  "field.archived": "Archived",
+  "field.kind": "Fact kind",
+  "field.id": "ID",
+  "field.factId": "Fact",
+  "field.period": "Period",
+  "field.facts": "Facts",
+  "field.profile": "Profile",
+  "field.links": "Links",
+  "field.metrics": "Metrics",
+  "path.educationIds": "Education",
+  "path.skillIds": "Skills",
+  "path.sourceFactIds": "source",
+  "path.bullets": "item",
+  "path.projects": "Project",
+  "path.experiences": "Experience",
+  "path.headline": "Headline",
+  "page.playground": "Checker playground",
+  "page.review": "Review",
+  "page.job": "Job and fit",
+  "generation.timeout": "The provider did not respond within 5 minutes. Try again or use a smaller model.",
+  "import.discardReview": "Discard the current review?",
   "import.title": "Import resume",
   "import.text": "Paste your resume or LinkedIn text",
   "import.file": "Open PDF or TXT file",
@@ -498,7 +542,7 @@ const violations: Record<Locale, Record<ViolationCode, string>> = {
     unknown_fact: "Fato desconhecido: {value}",
     archived_fact: "Fato arquivado: {value}",
     wrong_context: "Fonte fora do contexto: {value}",
-    unsupported_skill: "Competência sem apoio nas fontes: {value}",
+    unsupported_skill: "Skill sem apoio nas fontes: {value}",
     unsupported_number: "Número sem apoio nas fontes: {value}",
   },
   en: {
@@ -522,7 +566,7 @@ const validation: Record<Locale, Record<ValidationCode, string>> = {
     duplicate_id: "ID duplicado: {id}",
     missing_reference: "Referência não encontrada: {id}",
     wrong_reference_kind: "A referência não corresponde ao tipo esperado",
-    ambiguous_skill_name: "Nome de competência ambíguo: {name}",
+    ambiguous_skill_name: "Nome de skill ambíguo: {name}",
   },
   en: {
     required: "Required field",
@@ -542,6 +586,10 @@ const validation: Record<Locale, Record<ValidationCode, string>> = {
 type Params = Record<string, unknown>;
 type Issue = { message: string; params?: Params };
 export type TranslationKey = keyof typeof ptBR;
+
+export function isTranslationKey(key: string): key is TranslationKey {
+  return Object.prototype.hasOwnProperty.call(ptBR, key);
+}
 
 function interpolate(template: string, params: Params = {}): string {
   return template.replace(/\{(\w+)\}/g, (placeholder, name: string) =>
@@ -580,8 +628,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       // Language switching still works without storage.
     }
     document.documentElement.lang = locale;
-    document.title = dictionary["app.title"];
-  }, [locale, dictionary]);
+  }, [locale]);
 
   const t: I18n["t"] = (key, params) => interpolate(dictionary[key], params);
   const tViolation: I18n["tViolation"] = (violation) =>

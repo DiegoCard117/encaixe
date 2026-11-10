@@ -8,6 +8,7 @@ import {
 } from "@encaixe/core";
 import { resumePresent, useI18n } from "../i18n";
 import { highlight } from "../highlight";
+import { describePath } from "../paths";
 import { loadDraft, saveDraft, useGeneration, type SavedDraft } from "../generation";
 
 function EditableText({
@@ -340,7 +341,7 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
                     className="break-words rounded-lg border border-warn-line bg-warn-soft p-3 text-sm text-warn-ink"
                   >
                     <p>{tViolation(violation)}</p>
-                    <p className="mt-2 break-all font-mono text-xs">{violation.path.join(".")}</p>
+                    <p className="mt-2 break-words text-xs">{describePath(violation.path, t, bank)}</p>
                   </li>
                 ))}
               </ul>

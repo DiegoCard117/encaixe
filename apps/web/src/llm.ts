@@ -33,7 +33,8 @@ export interface LlmSettings {
   apiKey: string;
   remember: boolean;
 }
-export type LlmErrorCode = "auth" | "rate_limit" | "refused" | "truncated" | "network" | "api";
+export type LlmErrorCode =
+  "auth" | "rate_limit" | "refused" | "truncated" | "network" | "api" | "timeout" | "canceled";
 export class LlmError extends Error {
   constructor(
     public code: LlmErrorCode,
@@ -102,35 +103,51 @@ export function saveLlmSettings(s: LlmSettings): void {
     /* The current configuration still works in memory. */
   }
 }
-export function createCallLlm(s: LlmSettings): CallLlm {
+export function createCallLlm(s: LlmSettings, signal?: AbortSignal): CallLlm {
   return async (messages) => {
+    const timeout = AbortSignal.timeout(300_000);
+    const combinedSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+    const checkAbort = () => {
+      if (signal?.aborted) throw new LlmError("canceled");
+      if (timeout.aborted) throw new LlmError("timeout");
+    };
+    checkAbort();
     if (s.provider === "anthropic") {
       // SDK carregado só quando usado: quem usa uma API compatível nunca baixa.
       let Anthropic: typeof import("@anthropic-ai/sdk").default;
       try {
         ({ default: Anthropic } = await import("@anthropic-ai/sdk"));
       } catch {
+        checkAbort();
         throw new LlmError("network");
       }
       try {
+        checkAbort();
         const client = new Anthropic({ apiKey: s.apiKey, dangerouslyAllowBrowser: true });
         const withFallback = s.model === "claude-opus-5-5" || s.model === "claude-sonnet-5-5";
-        const res = await client.beta.messages.create({
-          model: s.model,
-          max_tokens: 16000,
-          system: messages.system,
-          messages: [{ role: "user", content: messages.user }],
-          ...(withFallback
-            ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
-            : {}),
-        });
+        const res = await client.beta.messages.create(
+          {
+            model: s.model,
+            max_tokens: 16000,
+            system: messages.system,
+            messages: [{ role: "user", content: messages.user }],
+            ...(withFallback
+              ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
+              : {}),
+          },
+          { signal: combinedSignal, timeout: 300_000 },
+        );
+        checkAbort();
         if (res.stop_reason === "refusal") throw new LlmError("refused");
         if (res.stop_reason === "max_tokens") throw new LlmError("truncated");
         return res.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
       } catch (error) {
+        checkAbort();
         if (error instanceof LlmError) throw error;
         if (error instanceof Anthropic.AuthenticationError) throw new LlmError("auth", error.status);
         if (error instanceof Anthropic.RateLimitError) throw new LlmError("rate_limit", error.status);
+        if (error instanceof Anthropic.APIUserAbortError) throw new LlmError("canceled");
+        if (error instanceof Anthropic.APIConnectionTimeoutError) throw new LlmError("timeout");
         if (error instanceof Anthropic.APIConnectionError) throw new LlmError("network");
         if (error instanceof Anthropic.APIError) throw new LlmError("api", error.status);
         throw new LlmError("api");
@@ -149,6 +166,7 @@ export function createCallLlm(s: LlmSettings): CallLlm {
       const request = (jsonFormat: boolean) =>
         fetch(url, {
           method: "POST",
+          signal: combinedSignal,
           headers: {
             "Content-Type": "application/json",
             ...(s.apiKey.trim() ? { Authorization: `Bearer ${s.apiKey.trim()}` } : {}),
@@ -164,18 +182,22 @@ export function createCallLlm(s: LlmSettings): CallLlm {
         res = await request(false);
       }
     } catch {
+      checkAbort();
       throw new LlmError("network");
     }
+    checkAbort();
     if (!res.ok)
       throw new LlmError(res.status === 401 ? "auth" : res.status === 429 ? "rate_limit" : "api", res.status);
     try {
       const data = await res.json();
+      checkAbort();
       const choice = data.choices?.[0];
       if (choice?.finish_reason === "length") throw new LlmError("truncated");
       if (choice?.message?.refusal) throw new LlmError("refused");
       if (typeof choice?.message?.content !== "string") throw new LlmError("api");
       return choice.message.content;
     } catch (error) {
+      checkAbort();
       throw error instanceof LlmError ? error : new LlmError("api");
     }
   };

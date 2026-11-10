@@ -13,6 +13,7 @@ Mudou de ideia? Edite a linha e diga o motivo no commit.
 - **LLM com a chave do usuário, direto do navegador.** Sem backend nosso: custo zero e nenhum dado passa por servidor do projeto.
 - **O usuário escolhe o provedor de LLM: Anthropic ou qualquer API compatível com OpenAI.** Chamada direta do navegador: Anthropic pelo SDK oficial (`@anthropic-ai/sdk` com `dangerouslyAllowBrowser`, carregado sob demanda, modelo padrão Claude Opus 5.5 e fallback do servidor em caso de recusa); compatível com OpenAI por `fetch`, com atalhos para OpenAI, Gemini, Groq, OpenRouter e Ollama, para que o app possa ser usado sem pagar (camadas gratuitas ou modelo local). O core recebe a função de chamada, então novos provedores entram sem mexer na lógica.
 - **Chave da API só na sessão por padrão**, com opção explícita de lembrar neste navegador.
+- **Toda chamada à LLM tem tempo limite de 5 minutos e pode ser cancelada.** Modelo local lento ou servidor travado não prende a tela.
 - **Aderência fato × vaga determinística** (termos, skills e tags), sem embeddings: explicável, offline e testável.
 - **Sem telemetria.**
 
@@ -27,7 +28,8 @@ Mudou de ideia? Edite a linha e diga o motivo no commit.
 - **React + Vite**, publicado no GitHub Pages pelo Actions a cada push na `main`. Pages em vez de Vercel: o app é estático, sem servidor nem variável de ambiente, e fica tudo no GitHub. Build com caminhos relativos (`base: "./"`) e rotas por hash, então funciona em `/encaixe/`, em forks e em domínio próprio sem configuração.
 - **Tailwind** para estilo e **react-hook-form + zod** reaproveitando os schemas do core. Componentes do shadcn/ui só quando precisar.
 - **i18n desde o primeiro componente: pt-BR e en.** Nenhum texto de interface fica fixo no JSX; tudo sai de dicionários tipados por idioma (o TypeScript garante que os dois têm as mesmas chaves), datas e números via `Intl`. Sem biblioteca enquanto isso bastar. Idioma inicial: o do navegador, com troca manual.
-- **O core não fala com o usuário.** Ele devolve códigos (`code`, `value`, `path`), nunca frases; a tradução é da interface. Vale para violações e erros de validação.
+- **O core não fala com o usuário.** Ele devolve códigos (`code`, `value`, `path`), nunca frases; a tradução é da interface. Vale para violações e erros de validação. A interface mostra o `path` em linguagem comum ("Experiência 1 · item 2", "Python · Nome"); o caminho técnico só aparece no playground.
+- **Vocabulário:** "skill" em pt-BR também, como no resto da área de tecnologia.
 - O idioma da interface e o do currículo gerado são independentes (`locale` do banco).
 - **Tema claro e escuro desde o início.** Cores só por tokens (variáveis CSS) com valor para cada tema; segue o sistema por padrão, com troca manual. A prévia do currículo é "papel" e continua clara no tema escuro, como o PDF.
 - **Saída em PDF** pelo CSS de impressão, com um modelo legível por ATS no MVP.
@@ -62,7 +64,7 @@ Abrir o app → montar o banco de fatos → colar a vaga → ver a aderência �
 
 - **Sem conta nem login.** O banco remoto é só sincronização opcional, nunca barreira.
 - **Três entradas para o banco de fatos:** importar currículo antigo (a LLM extrai fatos e o usuário confirma cada um), carregar JSON ou começar do zero.
-- **Importar currículo antigo:** texto colado, PDF ou TXT. O PDF é lido no navegador (`pdfjs-dist`, carregado só quando usado); PDF escaneado não tem texto e o app pede para colar. A LLM só transcreve para o formato do banco; o core descarta itens inválidos ou órfãos, troca os ids, reaproveita skills que já estão no banco e aponta números e skills que não aparecem no texto original. Nada entra sem confirmação, e itens com alerta não entram no "confirmar todos".
+- **Importar currículo antigo:** texto colado, PDF ou TXT. O PDF é lido no navegador (`pdfjs-dist`, carregado só quando usado); PDF escaneado não tem texto e o app pede para colar. A LLM só transcreve para o formato do banco; o core descarta itens inválidos ou órfãos, troca os ids, reaproveita skills que já estão no banco e aponta números e skills que não aparecem no texto original. Nada entra sem confirmação, e itens com alerta não entram no "confirmar todos". A revisão em andamento fica salva no navegador até ser adicionada ao banco ou descartada, para não pagar outra extração por causa de um recarregamento.
 - **Lacuna não vira invenção.** Skill da vaga que não está no banco aparece como lacuna; a única saída é cadastrar um fato real.
 - **Chave da LLM pedida só na primeira geração**, não no onboarding.
 - **PDF só sai com zero violações.** Para destravar: editar, remover o bullet ou regenerar.

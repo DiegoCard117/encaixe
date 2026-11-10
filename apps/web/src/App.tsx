@@ -21,6 +21,18 @@ export default function App() {
     window.addEventListener("hashchange", update);
     return () => window.removeEventListener("hashchange", update);
   }, []);
+  const pageTitle =
+    hash === "#/vaga"
+      ? t("page.job")
+      : hash === "#/revisao"
+        ? t("page.review")
+        : hash === "#/playground"
+          ? t("page.playground")
+          : t("bank.title");
+  const title = `${t("app.name")} — ${pageTitle}`;
+  useEffect(() => {
+    document.title = title;
+  }, [title]);
   function cycleTheme() {
     const next: ThemePref = theme === "system" ? "light" : theme === "light" ? "dark" : "system";
     setTheme(next);
@@ -60,7 +72,7 @@ export default function App() {
       </header>
       <nav className="mb-8 flex flex-wrap items-center gap-3 print:hidden" aria-label={t("editor.steps")}>
         <a
-          className="bank-button bg-accent-soft text-accent-ink"
+          className={`bank-button min-h-10 ${!stepRoute && hash !== "#/playground" ? "bg-accent-soft text-accent-ink" : "text-muted"}`}
           href="#/"
           aria-current={!stepRoute && hash !== "#/playground" ? "step" : undefined}
         >

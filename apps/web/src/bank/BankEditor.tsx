@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { FactBankSchema, createEmptyFactBank, referencesTo, type Fact, type FactKind } from "@encaixe/core";
 import { sampleBank } from "@encaixe/core/fixtures";
 import { useI18n } from "../i18n";
+import { describePath } from "../paths";
 import { loadBank, saveBank } from "./storage";
 import { download, Errors, factTitle, Modal } from "./ui";
 import ProfileForm from "./ProfileForm";
@@ -28,7 +29,7 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
     const result = FactBankSchema.safeParse(candidate);
     if (!result.success)
       return result.error.issues.map(
-        (issue) => `${issue.path.join(".") || t("draft.root")}: ${tIssue(issue)}`,
+        (issue) => `${describePath(issue.path, t, candidate)}: ${tIssue(issue)}`,
       );
     const saved = saveBank(result.data);
     setStored({ status: "ok", bank: result.data });
@@ -59,7 +60,7 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
     const result = FactBankSchema.safeParse(parsed);
     if (!result.success) {
       setErrors(
-        result.error.issues.map((issue) => `${issue.path.join(".") || t("draft.root")}: ${tIssue(issue)}`),
+        result.error.issues.map((issue) => `${describePath(issue.path, t, parsed)}: ${tIssue(issue)}`),
       );
       return;
     }

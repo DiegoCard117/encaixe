@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import {
   buildExtractionPrompt,
@@ -7,6 +7,8 @@ import {
   createEmptyFactBank,
   mergeExtraction,
   parseExtraction,
+  ProfileSchema,
+  FactSchema,
   type Extraction,
   type Fact,
   type FactBank,
@@ -19,6 +21,78 @@ import ProfileForm from "./ProfileForm";
 import { Errors, factTitle, Modal } from "./ui";
 
 type Status = "pending" | "confirmed" | "discarded";
+type SavedReview = {
+  text: string;
+  sourceText: string;
+  extraction: Extraction;
+  dropped: number;
+  statuses: Record<string, Status>;
+  profileStatus: Status;
+  hasEdits: boolean;
+};
+const reviewKey = "encaixe.import";
+const isStatus = (value: unknown): value is Status =>
+  value === "pending" || value === "confirmed" || value === "discarded";
+
+function clearReview() {
+  try {
+    localStorage.removeItem(reviewKey);
+  } catch {
+    /* Storage may be unavailable. */
+  }
+}
+
+function loadReview(): SavedReview | undefined {
+  try {
+    const raw = localStorage.getItem(reviewKey);
+    if (raw === null) return;
+    const value = JSON.parse(raw);
+    if (
+      !value ||
+      typeof value.text !== "string" ||
+      typeof value.sourceText !== "string" ||
+      !Number.isInteger(value.dropped) ||
+      value.dropped < 0 ||
+      !value.extraction ||
+      !Array.isArray(value.extraction.facts) ||
+      (value.extraction.locale !== "pt-BR" && value.extraction.locale !== "en") ||
+      !value.statuses ||
+      typeof value.statuses !== "object" ||
+      Array.isArray(value.statuses) ||
+      !Object.values(value.statuses).every(isStatus) ||
+      !isStatus(value.profileStatus) ||
+      (value.hasEdits !== undefined && typeof value.hasEdits !== "boolean")
+    ) {
+      clearReview();
+      return;
+    }
+    const profile = ProfileSchema.safeParse(value.extraction.profile);
+    if (!profile.success) {
+      clearReview();
+      return;
+    }
+    const facts: Fact[] = [];
+    for (const input of value.extraction.facts) {
+      const fact = FactSchema.safeParse(input);
+      if (!fact.success) {
+        clearReview();
+        return;
+      }
+      facts.push(fact.data);
+    }
+    return {
+      text: value.text,
+      sourceText: value.sourceText,
+      extraction: { profile: profile.data, facts, locale: value.extraction.locale },
+      dropped: value.dropped,
+      statuses: value.statuses,
+      profileStatus: value.profileStatus,
+      hasEdits: value.hasEdits ?? false,
+    };
+  } catch {
+    clearReview();
+  }
+}
 
 export default function ImportResume({
   bank,
@@ -32,13 +106,34 @@ export default function ImportResume({
   const { t } = useI18n();
   const llm = useLlmTask();
   const fileInput = useRef<HTMLInputElement>(null);
-  const [text, setText] = useState("");
-  const [sourceText, setSourceText] = useState("");
+  const [restored] = useState(loadReview);
+  const [text, setText] = useState(restored?.text ?? "");
+  const [sourceText, setSourceText] = useState(restored?.sourceText ?? "");
   const [reading, setReading] = useState(false);
-  const [extraction, setExtraction] = useState<Extraction>();
-  const [dropped, setDropped] = useState(0);
-  const [statuses, setStatuses] = useState<Record<string, Status>>({});
-  const [profileStatus, setProfileStatus] = useState<Status>("pending");
+  const [extraction, setExtraction] = useState<Extraction | undefined>(restored?.extraction);
+  const [dropped, setDropped] = useState(restored?.dropped ?? 0);
+  const [statuses, setStatuses] = useState<Record<string, Status>>(restored?.statuses ?? {});
+  const [profileStatus, setProfileStatus] = useState<Status>(restored?.profileStatus ?? "pending");
+  const [hasEdits, setHasEdits] = useState(restored?.hasEdits ?? false);
+  useEffect(() => {
+    if (!extraction) return;
+    try {
+      localStorage.setItem(
+        reviewKey,
+        JSON.stringify({
+          text,
+          sourceText,
+          extraction,
+          dropped,
+          statuses,
+          profileStatus,
+          hasEdits,
+        }),
+      );
+    } catch {
+      /* Review still works without storage. */
+    }
+  }, [text, sourceText, extraction, dropped, statuses, profileStatus, hasEdits]);
   const [editing, setEditing] = useState<Fact | "profile">();
   const [errors, setErrors] = useState<string[]>([]);
   const busy = llm.busy || reading;
@@ -102,6 +197,7 @@ export default function ImportResume({
       setDropped(parsed.dropped);
       setStatuses(Object.fromEntries(merged.facts.map((fact) => [fact.id, "pending"])));
       setProfileStatus("pending");
+      setHasEdits(false);
     });
   }
 
@@ -173,7 +269,10 @@ export default function ImportResume({
       ],
     });
     setErrors(issues);
-    if (!issues.length) onClose();
+    if (!issues.length) {
+      clearReview();
+      onClose();
+    }
   }
 
   function actions(
@@ -406,7 +505,16 @@ export default function ImportResume({
               type="button"
               className="bank-button"
               onClick={() => {
+                if (
+                  (hasEdits ||
+                    profileStatus === "confirmed" ||
+                    Object.values(statuses).includes("confirmed")) &&
+                  !window.confirm(t("import.discardReview"))
+                )
+                  return;
+                clearReview();
                 setExtraction(undefined);
+                setHasEdits(false);
                 setErrors([]);
                 llm.setError(undefined);
               }}
@@ -439,6 +547,7 @@ export default function ImportResume({
               bankLocale={extraction.locale}
               onCancel={() => setEditing(undefined)}
               onSave={(profile, locale) => {
+                setHasEdits(true);
                 setExtraction({ ...extraction, profile, locale });
                 setProfileStatus("confirmed");
                 setEditing(undefined);
@@ -460,6 +569,7 @@ export default function ImportResume({
                     }),
                   ];
                 }
+                setHasEdits(true);
                 setExtraction({
                   ...extraction,
                   facts: facts.map((current) => (current.id === fact.id ? fact : current)),

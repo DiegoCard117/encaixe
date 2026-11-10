@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ProfileSchema, type Profile, type ProfileInput } from "@encaixe/core";
 import { useI18n } from "../i18n";
 import { Errors } from "./ui";
+import { describePath } from "../paths";
 
 export default function ProfileForm({
   profile,
@@ -31,15 +32,15 @@ export default function ProfileForm({
       onSubmit={handleSubmit(
         (value) => setErrors(onSave(value, locale)),
         (invalid) => {
-          const collect = (value: unknown, path: string): string[] => {
+          const collect = (value: unknown, path: (string | number)[]): string[] => {
             if (!value || typeof value !== "object") return [];
             if ("message" in value && typeof value.message === "string")
-              return [`${path}: ${tIssue({ message: value.message })}`];
+              return [`${describePath(path, t)}: ${tIssue({ message: value.message })}`];
             return Object.entries(value)
               .filter(([key]) => key !== "ref")
-              .flatMap(([key, child]) => collect(child, path ? `${path}.${key}` : key));
+              .flatMap(([key, child]) => collect(child, [...path, /^\d+$/.test(key) ? Number(key) : key]));
           };
-          setErrors(collect(invalid, ""));
+          setErrors(collect(invalid, []));
         },
       )}
     >
