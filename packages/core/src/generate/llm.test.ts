@@ -19,6 +19,32 @@ const draft = ResumeDraftSchema.parse({
 });
 
 describe("buildResumePrompt", () => {
+  it("envia termos cobertos e regras de aderência com suporte nos fatos", () => {
+    const jobText = "Desenvolvedor Python com SQL e APIs REST";
+    const messages = buildResumePrompt({ ...input, jobText, fit: analyzeFit(bank, jobText) });
+    const data = JSON.parse(messages.user.split("\n\nFact data:\n")[1]!);
+    expect(data.coveredTerms).toEqual([{ term: "SQL", via: ["PostgreSQL"] }]);
+    expect(messages.system).toContain("Mirror the job posting's exact wording");
+    expect(messages.system).toContain('write "APIs REST"');
+    expect(messages.system).toContain("Never add a claim the cited facts do not support");
+    expect(messages.system).toContain(
+      "A covered term may be written when citing a fact that has one of its via skills",
+    );
+    expect(messages.system).toContain("Order experiences' bullets and projects by relevance to the job");
+    expect(messages.system).toContain(
+      "choose the headline and summary to match the job title and main requirements",
+    );
+    expect(messages.system).toContain(
+      "Never claim seniority, titles, certifications or years of experience that are not in the facts",
+    );
+    expect(messages.system).toContain(
+      "skillIds: include every skill supported by the facts that the job mentions first",
+    );
+    expect(messages.system).toContain(
+      "Keep each bullet one sentence, starting with a strong past-tense or present verb, with numbers from the facts when available",
+    );
+  });
+
   it.each(["pt-BR", "en"] as const)("inclui os fatos ativos e o locale %s", (locale) => {
     const bankWithArchive = FactBankSchema.parse({
       ...sampleBank,

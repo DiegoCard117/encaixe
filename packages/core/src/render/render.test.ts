@@ -26,6 +26,82 @@ const draft = ResumeDraftSchema.parse({
 });
 
 describe("renderResume", () => {
+  it("separa cursos, certificações, bootcamps e idiomas sem duplicar", () => {
+    const extendedBank = FactBankSchema.parse({
+      ...sampleBank,
+      facts: [
+        ...sampleBank.facts,
+        ...(["course", "certification", "bootcamp"] as const).map((type) => ({
+          id: `edu_${type}`,
+          kind: "education",
+          title: type,
+          institution: "Instituição",
+          type,
+          status: "completed",
+          period: { start: "2024-01", end: "2024-02" },
+        })),
+        { id: "skl_english", kind: "skill", name: "Inglês", category: "spoken_language", level: "advanced" },
+        { id: "skl_spanish", kind: "skill", name: "Espanhol", category: "spoken_language" },
+      ],
+    });
+    const rendered = renderResume(
+      extendedBank,
+      {
+        ...draft,
+        skillIds: [...draft.skillIds, "skl_english", "skl_spanish"],
+        educationIds: [...draft.educationIds, "edu_course", "edu_certification", "edu_bootcamp"],
+      },
+      "pt-BR",
+    );
+    expect(rendered.education.map(({ factId }) => factId)).toEqual(["edu_ads"]);
+    expect(rendered.certifications.map(({ type }) => type)).toEqual(["course", "certification", "bootcamp"]);
+    expect(rendered.certifications[0]).toMatchObject({
+      title: "course",
+      institution: "Instituição",
+      status: "completed",
+      period: { start: "2024-01", end: "2024-02" },
+    });
+    expect(rendered.skills.map(({ factId }) => factId)).toEqual(draft.skillIds);
+    expect(rendered.languages).toEqual([
+      { factId: "skl_english", name: "Inglês", category: "spoken_language", level: "advanced" },
+      { factId: "skl_spanish", name: "Espanhol", category: "spoken_language" },
+    ]);
+    const archivedBank = FactBankSchema.parse({
+      ...extendedBank,
+      facts: extendedBank.facts.map((fact) => ({ ...fact, archived: true })),
+    });
+    expect(
+      renderResume(
+        archivedBank,
+        {
+          ...draft,
+          skillIds: ["skl_english"],
+          educationIds: ["edu_course"],
+        },
+        "pt-BR",
+      ),
+    ).toMatchObject({ education: [], certifications: [], skills: [], languages: [] });
+  });
+
+  it("prioriza jobSkillIds e mantém as demais skills na ordem do rascunho", () => {
+    const selected = { ...draft, skillIds: ["skl_selenium", "skl_postgresql", "skl_django", "skl_python"] };
+    const originalOrder = [...selected.skillIds];
+    const rendered = renderResume(bank, selected, "pt-BR", [
+      "skl_missing",
+      "skl_python",
+      "skl_postgresql",
+      "skl_python",
+    ]);
+    expect(rendered.skills.map(({ factId }) => factId)).toEqual([
+      "skl_python",
+      "skl_postgresql",
+      "skl_selenium",
+      "skl_django",
+    ]);
+    expect(selected.skillIds).toEqual(originalOrder);
+    expect(renderResume(bank, selected, "pt-BR").skills.map(({ factId }) => factId)).toEqual(originalOrder);
+  });
+
   it("resolve experiências e preserva a ordem dos bullets e as datas", () => {
     const rendered = renderResume(bank, draft, "pt-BR");
     const experience = bank.facts.find((fact) => fact.kind === "experience")!;

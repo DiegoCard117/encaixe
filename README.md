@@ -72,7 +72,7 @@ Em desenvolvimento. Acompanhe o [roadmap](https://github.com/users/DiegoCard117/
 - [x] Prompt e validação da resposta da LLM (sem depender de provedor) e renderização do currículo com dados reais
 - [x] Editor do banco de fatos no navegador, com importação/exportação em JSON
 - [x] Vaga e aderência, geração com a sua chave (Anthropic ou API compatível com OpenAI) e revisão das invenções
-- [x] Exportação em PDF pela impressão do navegador (liberada só com zero invenções)
+- [x] Exportação em PDF pela impressão do navegador (liberada só com zero invenções), em formato pensado para ATS e IAs de RH
 - [x] Publicação no GitHub Pages a cada push na `main`
 - [x] Importação de currículo antigo (texto colado, PDF ou TXT): a LLM transcreve os fatos, o app aponta números e skills que
       não estão no texto e cada fato só entra no banco depois de confirmado

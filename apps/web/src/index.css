@@ -209,6 +209,11 @@ html:has(dialog[open]) {
     background: white;
     color: var(--paper-ink);
     color-scheme: light;
+    font-variant-ligatures: none;
+    font-feature-settings:
+      "liga" 0,
+      "clig" 0;
+    columns: auto;
   }
 
   .resume-paper * {
@@ -219,6 +224,16 @@ html:has(dialog[open]) {
 
   .resume-paper a {
     text-decoration: none;
+  }
+
+  .resume-paper h2::before,
+  .resume-paper h4::before {
+    content: none;
+  }
+
+  .resume-paper ul {
+    list-style-type: disc;
+    padding-left: 1.25rem;
   }
 
   .resume-entry {

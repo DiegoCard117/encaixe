@@ -41,10 +41,39 @@ export interface RenderedResume {
     status: EducationFact["status"];
     period?: Period;
   }[];
+  certifications: RenderedResume["education"];
+  languages: RenderedResume["skills"];
 }
 
-export function renderResume(bank: FactBank, draft: ResumeDraft, locale: "pt-BR" | "en"): RenderedResume {
+export function renderResume(
+  bank: FactBank,
+  draft: ResumeDraft,
+  locale: "pt-BR" | "en",
+  jobSkillIds: string[] = [],
+): RenderedResume {
   const facts = indexFacts(bank);
+  const skills = draft.skillIds.flatMap((factId) => {
+    const fact = facts.get(factId);
+    if (!fact || fact.archived || fact.kind !== "skill") return [];
+    return [{ factId, name: fact.name, category: fact.category, level: fact.level }];
+  });
+  const education = draft.educationIds.flatMap((factId) => {
+    const fact = facts.get(factId);
+    if (!fact || fact.archived || fact.kind !== "education") return [];
+    return [
+      {
+        factId,
+        institution: fact.institution,
+        title: fact.title,
+        type: fact.type,
+        status: fact.status,
+        period: fact.period,
+      },
+    ];
+  });
+  const isCertification = (item: RenderedResume["education"][number]) =>
+    ["course", "certification", "bootcamp"].includes(item.type);
+  const priority = new Map([...new Set(jobSkillIds)].map((id, index) => [id, index]));
   return {
     locale,
     profile: bank.profile,
@@ -81,31 +110,14 @@ export function renderResume(bank: FactBank, draft: ResumeDraft, locale: "pt-BR"
         },
       ];
     }),
-    skills: draft.skillIds.flatMap((factId) => {
-      const fact = facts.get(factId);
-      if (!fact || fact.archived || fact.kind !== "skill") return [];
-      return [
-        {
-          factId,
-          name: fact.name,
-          category: fact.category,
-          level: fact.level,
-        },
-      ];
-    }),
-    education: draft.educationIds.flatMap((factId) => {
-      const fact = facts.get(factId);
-      if (!fact || fact.archived || fact.kind !== "education") return [];
-      return [
-        {
-          factId,
-          institution: fact.institution,
-          title: fact.title,
-          type: fact.type,
-          status: fact.status,
-          period: fact.period,
-        },
-      ];
-    }),
+    skills: skills
+      .filter((skill) => skill.category !== "spoken_language")
+      .sort(
+        (a, b) =>
+          (priority.get(a.factId) ?? jobSkillIds.length) - (priority.get(b.factId) ?? jobSkillIds.length),
+      ),
+    languages: skills.filter((skill) => skill.category === "spoken_language"),
+    education: education.filter((item) => !isCertification(item)),
+    certifications: education.filter(isCertification),
   };
 }

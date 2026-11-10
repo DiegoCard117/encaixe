@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  analyzeFit,
   checkResumeDraft,
   renderResume,
   type FactBank,
@@ -121,18 +122,32 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
     setStorageError(false);
   });
   const violations = checkResumeDraft(bank, draft);
-  const resume = renderResume(bank, draft, locale);
+  const fit = analyzeFit(bank, jobText);
+  const jobSkillIds = [
+    ...fit.matchedSkills.map(({ skillId }) => skillId),
+    ...fit.impliedSkills.flatMap(({ via }) =>
+      via.flatMap((name) =>
+        bank.facts.flatMap((fact) =>
+          !fact.archived && fact.kind === "skill" && fact.name === name ? [fact.id] : [],
+        ),
+      ),
+    ),
+  ];
+  const resume = renderResume(bank, draft, locale, jobSkillIds);
   const relevant = (prefix: (string | number)[]) =>
     violations.filter(({ path }) => prefix.every((part, i) => path[i] === part));
   function exportPdf() {
     if (violations.length) return;
     const previousTitle = document.title;
+    const previousLang = document.documentElement.lang;
     const restoreTitle = () => {
       document.title = previousTitle;
+      document.documentElement.lang = previousLang;
       window.removeEventListener("afterprint", restoreTitle);
     };
     window.addEventListener("afterprint", restoreTitle);
-    document.title = t("review.pdfFilename", { name: resume.profile.fullName });
+    document.title = resumeT(locale, "review.pdfFilename", { name: resume.profile.fullName });
+    document.documentElement.lang = locale;
     try {
       window.print();
       setExported(true);
@@ -146,12 +161,9 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
     setSaved(value);
     setStorageError(!saveDraft(value));
   }
+  const date = (month: string) => `${month.slice(5, 7)}/${month.slice(0, 4)}`;
   function period(value?: { start: string; end: string | null }) {
     if (!value) return null;
-    const date = (month: string) =>
-      new Intl.DateTimeFormat(locale, { month: "short", year: "numeric" }).format(
-        new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1),
-      );
     return `${date(value.start)} – ${value.end === null ? resumePresent(locale) : date(value.end)}`;
   }
   return (
@@ -227,18 +239,38 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
           className="resume-paper min-w-0 space-y-5 rounded-lg bg-[var(--paper)] p-5 text-[var(--paper-ink)] [color-scheme:light] sm:p-10"
         >
           <header className="space-y-2 border-b border-line pb-5">
-            <h3 className="font-display text-2xl font-semibold">{resume.profile.fullName}</h3>
+            <h1 className="font-display text-2xl font-semibold">{resume.profile.fullName}</h1>
+            {draft.headline ? (
+              <EditableText
+                key={`headline-${draft.headline.text}`}
+                text={resume.headline ?? ""}
+                label={resumeT(locale, "field.headline")}
+                violations={relevant(["headline"])}
+                disabled={generation.busy}
+                onSave={(text) => update({ ...draft, headline: { ...draft.headline!, text } })}
+                onRemove={() => {
+                  const { headline, ...next } = draft;
+                  update(next);
+                }}
+              />
+            ) : (
+              <p>{resume.headline}</p>
+            )}
             <p className="break-words text-sm">
               {[resume.profile.email, resume.profile.phone, resume.profile.location]
-                .filter(Boolean)
-                .join(" · ")}
+                .filter((value): value is string => Boolean(value))
+                .map((value, i) => (
+                  <span key={i}>
+                    {i > 0 && " | "}
+                    {value === resume.profile.email ? <a href={`mailto:${value}`}>{value}</a> : value}
+                  </span>
+                ))}
             </p>
             {resume.profile.links.length > 0 && (
               <p className="break-words text-sm">
                 {resume.profile.links.map((link, i) => (
                   <span key={i}>
-                    {i > 0 && " · "}
-                    {link.label}:{" "}
+                    {i > 0 && " | "}
                     <a
                       className="underline underline-offset-2"
                       href={link.url}
@@ -251,145 +283,176 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
                 ))}
               </p>
             )}
-            {draft.headline ? (
+          </header>
+          {draft.summary && (
+            <section className="space-y-2">
+              <h2 className="font-display text-lg font-semibold">{resumeT(locale, "resume.summary")}</h2>
               <EditableText
-                key={`headline-${draft.headline.text}`}
-                text={resume.headline ?? ""}
-                label={t("field.headline")}
-                violations={relevant(["headline"])}
+                key={draft.summary.text}
+                text={resume.summary ?? ""}
+                label={resumeT(locale, "resume.summary")}
+                violations={relevant(["summary"])}
                 disabled={generation.busy}
-                onSave={(text) => update({ ...draft, headline: { ...draft.headline!, text } })}
+                onSave={(text) => update({ ...draft, summary: { ...draft.summary!, text } })}
                 onRemove={() => {
-                  const { headline, ...next } = draft;
+                  const { summary, ...next } = draft;
                   update(next);
                 }}
               />
-            ) : (
-              <p>{resume.headline}</p>
-            )}
-          </header>
-          {draft.summary && (
-            <EditableText
-              key={draft.summary.text}
-              text={resume.summary ?? ""}
-              label={t("field.summary")}
-              violations={relevant(["summary"])}
-              disabled={generation.busy}
-              onSave={(text) => update({ ...draft, summary: { ...draft.summary!, text } })}
-              onRemove={() => {
-                const { summary, ...next } = draft;
-                update(next);
-              }}
-            />
+            </section>
           )}
-          {(["experiences", "projects"] as const).map((section) => (
-            <section key={section} className="space-y-4">
-              <h4 className="font-display text-lg font-semibold">
-                {resumeT(locale, section === "experiences" ? "editor.experience" : "editor.project")}
-              </h4>
-              {draft[section].map((entry, entryIndex) => {
-                const experience =
-                  section === "experiences"
-                    ? resume.experiences.find((e) => e.factId === entry.factId)
-                    : undefined;
-                const project =
-                  section === "projects" ? resume.projects.find((e) => e.factId === entry.factId) : undefined;
-                const source = experience ?? project;
-                return (
-                  <div key={`${entryIndex}-${entry.factId}`} className="resume-entry space-y-2">
-                    <h5 className="font-semibold">
-                      {experience ? (
-                        `${experience.role} · ${experience.company}`
-                      ) : project ? (
-                        [project.name, project.role].filter(Boolean).join(" · ")
-                      ) : (
-                        <span className="print:hidden">{entry.factId}</span>
+          {(["experiences", "projects"] as const)
+            .filter((section) => draft[section].length > 0)
+            .map((section) => (
+              <section key={section} className="space-y-4">
+                <h4 className="font-display text-lg font-semibold">{resumeT(locale, `resume.${section}`)}</h4>
+                {draft[section].map((entry, entryIndex) => {
+                  const experience =
+                    section === "experiences"
+                      ? resume.experiences.find((e) => e.factId === entry.factId)
+                      : undefined;
+                  const project =
+                    section === "projects"
+                      ? resume.projects.find((e) => e.factId === entry.factId)
+                      : undefined;
+                  return (
+                    <div key={`${entryIndex}-${entry.factId}`} className="resume-entry space-y-2">
+                      <h5 className="font-semibold">
+                        {experience ? (
+                          experience.role
+                        ) : project ? (
+                          [project.name, project.role].filter(Boolean).join(" · ")
+                        ) : (
+                          <span className="print:hidden">{entry.factId}</span>
+                        )}
+                      </h5>
+                      {experience && (
+                        <p className="text-sm">
+                          {[experience.company, experience.location, period(experience.period)]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
                       )}
-                    </h5>
-                    {source?.period && <p className="text-sm">{period(source.period)}</p>}
-                    {project && (project.url || project.repositoryUrl) && (
-                      <p className="break-words text-sm">
-                        {[project.url, project.repositoryUrl].filter(Boolean).map((url, i) => (
-                          <span key={url}>
-                            {i > 0 && " · "}
-                            <a
-                              className="underline underline-offset-2"
-                              href={url}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              {shortUrl(url!)}
-                            </a>
-                          </span>
+                      {project && (project.period || project.url || project.repositoryUrl) && (
+                        <p className="break-words text-sm">
+                          {period(project.period)}
+                          {[project.url, project.repositoryUrl].filter(Boolean).map((url, i) => (
+                            <span key={url}>
+                              {(i > 0 || project.period) && " · "}
+                              <a
+                                className="underline underline-offset-2"
+                                href={url}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {shortUrl(url!)}
+                              </a>
+                            </span>
+                          ))}
+                        </p>
+                      )}
+                      <ul className="list-disc space-y-2 pl-5">
+                        {entry.bullets.map((bullet, bulletIndex) => (
+                          <li key={bulletIndex}>
+                            <EditableText
+                              key={`${bullet.text}-${bullet.sourceFactIds.join(",")}`}
+                              text={bullet.text}
+                              label={resumeT(locale, "review.bullet", {
+                                count: bulletIndex + 1,
+                                id: entry.factId,
+                              })}
+                              violations={[
+                                ...relevant([section, entryIndex, "bullets", bulletIndex]),
+                                ...relevant([section, entryIndex, "factId"]),
+                              ]}
+                              disabled={generation.busy}
+                              onSave={(text) =>
+                                update({
+                                  ...draft,
+                                  [section]: draft[section].map((item, i) =>
+                                    i === entryIndex
+                                      ? {
+                                          ...item,
+                                          bullets: item.bullets.map((b, j) =>
+                                            j === bulletIndex ? { ...b, text } : b,
+                                          ),
+                                        }
+                                      : item,
+                                  ),
+                                })
+                              }
+                              onRemove={() =>
+                                update({
+                                  ...draft,
+                                  [section]: draft[section].map((item, i) =>
+                                    i === entryIndex
+                                      ? { ...item, bullets: item.bullets.filter((_, j) => j !== bulletIndex) }
+                                      : item,
+                                  ),
+                                })
+                              }
+                            />
+                          </li>
                         ))}
-                      </p>
-                    )}
-                    <ul className="space-y-2">
-                      {entry.bullets.map((bullet, bulletIndex) => (
-                        <li key={bulletIndex}>
-                          <EditableText
-                            key={`${bullet.text}-${bullet.sourceFactIds.join(",")}`}
-                            text={bullet.text}
-                            label={t("review.bullet", {
-                              count: new Intl.NumberFormat(uiLocale).format(bulletIndex + 1),
-                              id: entry.factId,
-                            })}
-                            violations={[
-                              ...relevant([section, entryIndex, "bullets", bulletIndex]),
-                              ...relevant([section, entryIndex, "factId"]),
-                            ]}
-                            disabled={generation.busy}
-                            onSave={(text) =>
-                              update({
-                                ...draft,
-                                [section]: draft[section].map((item, i) =>
-                                  i === entryIndex
-                                    ? {
-                                        ...item,
-                                        bullets: item.bullets.map((b, j) =>
-                                          j === bulletIndex ? { ...b, text } : b,
-                                        ),
-                                      }
-                                    : item,
-                                ),
-                              })
-                            }
-                            onRemove={() =>
-                              update({
-                                ...draft,
-                                [section]: draft[section].map((item, i) =>
-                                  i === entryIndex
-                                    ? { ...item, bullets: item.bullets.filter((_, j) => j !== bulletIndex) }
-                                    : item,
-                                ),
-                              })
-                            }
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </section>
-          ))}
-          {resume.skills.length > 0 && (
-            <section>
-              <h4 className="font-display text-lg font-semibold">{resumeT(locale, "editor.skill")}</h4>
-              <p>{resume.skills.map((skill) => skill.name).join(" · ")}</p>
-            </section>
-          )}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </section>
+            ))}
           {resume.education.length > 0 && (
             <section className="space-y-3">
-              <h4 className="font-display text-lg font-semibold">{resumeT(locale, "editor.education")}</h4>
+              <h4 className="font-display text-lg font-semibold">{resumeT(locale, "resume.education")}</h4>
               {resume.education.map((education, i) => (
                 <div key={`${i}-${education.factId}`} className="resume-entry">
                   <h5 className="font-semibold">
-                    {education.title} · {education.institution}
+                    {education.title} — {education.institution}
                   </h5>
-                  <p>{period(education.period)}</p>
+                  <p>
+                    {[
+                      period(education.period),
+                      education.status !== "completed"
+                        ? `(${resumeT(locale, `resume.${education.status}`)})`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  </p>
                 </div>
               ))}
+            </section>
+          )}
+          {resume.certifications.length > 0 && (
+            <section>
+              <h4 className="font-display text-lg font-semibold">
+                {resumeT(locale, "resume.certifications")}
+              </h4>
+              {resume.certifications.map((item, i) => (
+                <p key={`${i}-${item.factId}`} className="resume-entry">
+                  {item.title} — {item.institution}
+                  {item.period && ` · ${date(item.period.end ?? item.period.start)}`}
+                </p>
+              ))}
+            </section>
+          )}
+          {resume.skills.length > 0 && (
+            <section>
+              <h4 className="font-display text-lg font-semibold">{resumeT(locale, "resume.skills")}</h4>
+              <p>{resume.skills.map((skill) => skill.name).join(", ")}</p>
+            </section>
+          )}
+          {resume.languages.length > 0 && (
+            <section>
+              <h4 className="font-display text-lg font-semibold">{resumeT(locale, "resume.languages")}</h4>
+              <p>
+                {resume.languages
+                  .map(
+                    (language) =>
+                      language.name +
+                      (language.level ? ` (${resumeT(locale, `resume.${language.level}`)})` : ""),
+                  )
+                  .join(", ")}
+              </p>
             </section>
           )}
         </article>

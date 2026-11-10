@@ -72,7 +72,7 @@ In development. Follow the [roadmap](https://github.com/users/DiegoCard117/proje
 - [x] Provider-independent LLM prompt and response validation, with resume rendering from real records
 - [x] Browser fact bank editor with JSON import/export
 - [x] Job matching, generation with your own key (Anthropic or an OpenAI-compatible API) and review of invented claims
-- [x] PDF export through browser printing, enabled only with zero violations
+- [x] PDF export through browser printing, enabled only with zero violations, in a format built for ATS and HR AI screening
 - [x] GitHub Pages deployment on every push to `main`
 - [x] Old resume import (pasted text, PDF or TXT): the LLM transcribes facts, the app flags numbers and skills missing from the source, and each fact enters the bank only after confirmation
 - [x] CLI to validate a bank, check a draft and see job fit (`pnpm cli`)
