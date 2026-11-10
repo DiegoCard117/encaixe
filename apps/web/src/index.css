@@ -131,7 +131,8 @@
   .bank-form input:not([type="checkbox"]),
   .bank-form select,
   .bank-form textarea {
-    @apply min-h-10 w-full rounded-lg border border-line bg-bg px-3 py-2 text-ink;
+    /* 16px no celular: abaixo disso o iOS dá zoom ao focar o campo. */
+    @apply min-h-10 w-full rounded-lg border border-line bg-bg px-3 py-2 text-base text-ink sm:text-sm;
   }
   .bank-form fieldset {
     @apply space-y-3 rounded-lg border border-line p-3;

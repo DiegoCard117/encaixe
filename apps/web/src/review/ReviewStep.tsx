@@ -151,15 +151,25 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
     <section aria-busy={generation.busy} className="resume-review space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-display text-2xl font-semibold">{t("editor.step3")}</h2>
-        <span
-          role="status"
-          className={`rounded-full px-3 py-2 text-sm ${violations.length ? "bg-warn-soft text-warn-ink" : "bg-accent-soft text-accent-ink"}`}
-        >
-          {violations.length
-            ? t(violations.length === 1 ? "check.one" : "check.count", {
+        <span role="status">
+          {violations.length ? (
+            // No celular a lista de violações fica abaixo do currículo: o selo leva até ela.
+            <button
+              type="button"
+              className="min-h-10 rounded-full bg-warn-soft px-3 py-2 text-sm text-warn-ink underline-offset-4 hover:underline"
+              onClick={() =>
+                document.getElementById("review-violations")?.scrollIntoView({ behavior: "smooth" })
+              }
+            >
+              {t(violations.length === 1 ? "check.one" : "check.count", {
                 count: new Intl.NumberFormat(uiLocale).format(violations.length),
-              })
-            : t("check.success")}
+              })}
+            </button>
+          ) : (
+            <span className="rounded-full bg-accent-soft px-3 py-2 text-sm text-accent-ink">
+              {t("check.success")}
+            </span>
+          )}
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-3">
