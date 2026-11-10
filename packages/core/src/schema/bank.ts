@@ -16,6 +16,8 @@ export const ProfileSchema = z.object({
   links: z.array(LinkSchema).max(10).default([]),
 });
 export type Profile = z.infer<typeof ProfileSchema>;
+/** Formato de entrada do perfil (campos com default são opcionais) — útil em formulários. */
+export type ProfileInput = z.input<typeof ProfileSchema>;
 
 /** Quais tipos cada referência pode apontar. */
 const ALLOWED_CONTEXT: Partial<Record<FactKind, readonly FactKind[]>> = {
@@ -109,4 +111,15 @@ export function createEmptyFactBank(profile: z.input<typeof ProfileSchema>): Fac
 /** Índice id → fato, para lookups da checagem anti-invenção e do renderizador. */
 export function indexFacts(bank: FactBank): ReadonlyMap<string, Fact> {
   return new Map(bank.facts.map((f) => [f.id, f]));
+}
+
+/** Ids dos fatos que apontam para `factId` (via contextId ou skillIds). */
+export function referencesTo(bank: FactBank, factId: string): string[] {
+  return bank.facts
+    .filter(
+      (fact) =>
+        ("contextId" in fact && fact.contextId === factId) ||
+        ("skillIds" in fact && fact.skillIds.includes(factId)),
+    )
+    .map((fact) => fact.id);
 }

@@ -18,7 +18,8 @@ Em desenvolvimento. Acompanhe o [roadmap](https://github.com/users/DiegoCard117/
 - [x] Tema claro/escuro e interface em português e inglês
 - [x] Aderência fato × vaga: skills que batem, lacunas e fatos mais relevantes
 - [x] Prompt e validação da resposta da LLM (sem depender de provedor) e renderização do currículo com dados reais
-- [ ] Editor do banco de fatos, geração no navegador, exportação em PDF
+- [x] Editor do banco de fatos no navegador, com importação/exportação em JSON
+- [ ] Geração no navegador, revisão e exportação em PDF
 
 ## Estrutura
 
@@ -38,7 +39,7 @@ pnpm install
 pnpm test
 pnpm typecheck
 pnpm format
-pnpm --filter @encaixe/web dev   # abre o app em http://localhost:5173
+pnpm --filter @encaixe/web dev   # abre o app em http://localhost:5173 (playground do checador em /#/playground)
 ```
 
 O CI roda `format:check`, `typecheck` e `test` a cada push e pull request.

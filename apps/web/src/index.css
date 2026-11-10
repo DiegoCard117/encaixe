@@ -82,11 +82,59 @@
   }
 
   button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
   textarea:focus-visible {
     @apply outline-2 outline-offset-4 outline-accent;
   }
 
   mark {
     @apply rounded bg-warn-soft px-0.5 text-warn-ink;
+  }
+}
+
+@layer components {
+  .bank-button {
+    @apply inline-flex min-h-10 items-center justify-center rounded-lg border border-line px-3 py-2 text-sm font-medium;
+  }
+  .bank-button:hover:not(:disabled):not([aria-disabled="true"]) {
+    @apply bg-accent-soft text-accent-ink;
+  }
+  button:disabled,
+  [aria-disabled="true"] {
+    @apply cursor-default text-muted;
+  }
+  .bank-card {
+    @apply min-w-0 rounded-xl border border-line bg-surface p-5;
+  }
+  .bank-errors {
+    @apply my-3 space-y-2 break-words rounded-lg border border-warn-line bg-warn-soft p-4 text-sm text-warn-ink;
+  }
+  .bank-dialog {
+    @apply m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-2xl overflow-y-auto rounded-xl border border-line bg-surface p-5 text-ink sm:p-7;
+  }
+  .bank-dialog::backdrop {
+    background: color-mix(in srgb, var(--ink) 45%, transparent);
+  }
+  .bank-form {
+    @apply space-y-5;
+  }
+  .bank-form label {
+    @apply flex flex-col gap-2 text-sm font-medium;
+  }
+  .bank-form input:not([type="checkbox"]),
+  .bank-form select,
+  .bank-form textarea {
+    @apply min-h-10 w-full rounded-lg border border-line bg-bg px-3 py-2 text-ink;
+  }
+  .bank-form fieldset {
+    @apply space-y-3 rounded-lg border border-line p-3;
+  }
+  .bank-form label.bank-check {
+    @apply min-h-10 flex-row flex-wrap items-center gap-2;
+  }
+  .bank-check input {
+    @apply size-5 shrink-0 accent-accent;
   }
 }

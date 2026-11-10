@@ -156,3 +156,19 @@ describe("ResumeDraftSchema", () => {
     expect(result.success).toBe(false);
   });
 });
+
+import { describe as describeReferences, it as itReferences, expect as expectReferences } from "vitest";
+import { FactBankSchema as ReferenceBankSchema, referencesTo as findReferences } from "./bank";
+import { sampleBank as referenceSampleBank } from "../__fixtures__/fact-bank";
+
+describeReferences("referencesTo", () => {
+  const referenceBank = ReferenceBankSchema.parse(referenceSampleBank);
+  itReferences("encontra referências via skills e contexto", () => {
+    expectReferences(findReferences(referenceBank, "skl_python")).toEqual([
+      "exp_coop-dev",
+      "ach_automacao-credito",
+    ]);
+    expectReferences(findReferences(referenceBank, "exp_coop-dev")).toEqual(["ach_automacao-credito"]);
+    expectReferences(findReferences(referenceBank, "edu_ads")).toEqual([]);
+  });
+});
