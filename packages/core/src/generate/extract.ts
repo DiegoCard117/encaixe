@@ -2,7 +2,9 @@ import { numbers, textFields } from "../check/anti-invention";
 import { createMentionFinder } from "../check/mentions";
 import { ProfileSchema, type FactBank, type Profile } from "../schema/bank";
 import { LinkSchema } from "../schema/common";
-import { FactSchema, type Fact, type SkillFact } from "../schema/facts";
+import { FactSchema, SKILL_CATEGORIES, type Fact, type SkillFact } from "../schema/facts";
+
+const SKILL_LEVELS: readonly unknown[] = ["basic", "intermediate", "advanced", "expert", "fluent", "native"];
 import { createFactId } from "../schema/ids";
 import { parseJsonResponse, type LlmMessages } from "./llm";
 
@@ -69,6 +71,12 @@ const URL_KEYS = ["url", "repositoryUrl", "credentialUrl"] as const;
 function parseFact(input: unknown) {
   if (!input || typeof input !== "object") return FactSchema.safeParse(input);
   const fixed: Record<string, unknown> = { ...input };
+  if (fixed.kind === "skill") {
+    // Modelos pequenos inventam categorias: o que não existe vira "tool" em vez de derrubar a skill.
+    if (!(SKILL_CATEGORIES as readonly unknown[]).includes(fixed.category)) fixed.category = "tool";
+    // Nível só vale para idioma; nível de skill técnica quase nunca está escrito e seria invenção.
+    if (fixed.category !== "spoken_language" || !SKILL_LEVELS.includes(fixed.level)) delete fixed.level;
+  }
   for (const key of URL_KEYS) if (key in fixed) fixed[key] = withScheme(fixed[key]);
   const parsed = FactSchema.safeParse(fixed);
   if (parsed.success) return parsed;

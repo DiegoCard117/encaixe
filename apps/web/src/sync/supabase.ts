@@ -13,7 +13,8 @@ export type SyncErrorCode =
   | "invalid_remote"
   | "api"
   | "storage"
-  | "invalid_local";
+  | "invalid_local"
+  | "rate_limit";
 export class SyncError extends Error {
   constructor(
     public code: SyncErrorCode,
@@ -135,6 +136,9 @@ export function syncError(error: unknown): SyncError {
     value?.name === "AuthRetryableFetchError"
   )
     return new SyncError("network", detail);
+  // Plano gratuito do Supabase: poucos e-mails de login por hora.
+  if (value?.status === 429 || /rate.?limit/i.test(`${value?.code ?? ""} ${message}`))
+    return new SyncError("rate_limit", detail);
   if (
     value?.status === 401 ||
     value?.status === 403 ||

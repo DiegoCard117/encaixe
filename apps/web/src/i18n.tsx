@@ -36,6 +36,8 @@ const ptBR = {
   "sync.error.secret_key":
     "Chave secreta rejeitada. Use somente a chave pública anon ou publishable, nunca service_role.",
   "sync.error.network": "Não foi possível conectar ao Supabase. Confira sua conexão.",
+  "sync.error.rate_limit":
+    "Limite de e-mails de login do Supabase atingido (o plano gratuito envia poucos por hora). Espere cerca de 1 hora e peça um único link, ou use o código de um e-mail já recebido.",
   "sync.error.auth":
     "Acesso não autorizado. Saia e entre novamente; confira a chave pública e as políticas RLS.",
   "sync.error.not_configured": "Configure a conexão com o Supabase.",
@@ -427,6 +429,8 @@ const en: Record<keyof typeof ptBR, string> = {
   "sync.error.secret_key":
     "Secret key rejected. Use only the public anon or publishable key, never service_role.",
   "sync.error.network": "Could not connect to Supabase. Check your connection.",
+  "sync.error.rate_limit":
+    "Supabase sign-in email limit reached (the free plan sends only a few per hour). Wait about an hour and request a single link, or use the code from an email you already got.",
   "sync.error.auth": "Access denied. Sign out and back in; check the public key and RLS policies.",
   "sync.error.not_configured": "Configure the Supabase connection.",
   "sync.error.table_missing":
