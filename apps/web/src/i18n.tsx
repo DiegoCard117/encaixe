@@ -145,7 +145,9 @@ const ptBR = {
   "generation.auth": "Chave inválida ou sem permissão. Confira a configuração de LLM.",
   "generation.rate_limit": "Limite do provedor atingido. Aguarde e tente de novo.",
   "generation.refused": "O provedor recusou a geração. Tente de novo.",
-  "generation.truncated": "A resposta foi interrompida antes de terminar. Tente de novo.",
+  "generation.truncated":
+    "A resposta veio cortada antes de terminar. Tente de novo ou escolha um modelo maior em Configurar LLM.",
+  "generation.rawDetail": "Resposta com {length} caracteres, terminando em: …{end}",
   "generation.network": "Não foi possível conectar ao provedor. Confira sua conexão.",
   "generation.api": "O provedor retornou um erro. Tente de novo.",
   "generation.model": "Modelo não encontrado. Confira o nome do modelo em Configurar LLM.",
@@ -488,7 +490,9 @@ const en: Record<keyof typeof ptBR, string> = {
   "generation.auth": "Invalid or unauthorized key. Check your LLM settings.",
   "generation.rate_limit": "Provider limit reached. Wait and try again.",
   "generation.refused": "The provider refused the generation. Try again.",
-  "generation.truncated": "The response ended before completion. Try again.",
+  "generation.truncated":
+    "The response was cut off before finishing. Try again or pick a larger model in Configure LLM.",
+  "generation.rawDetail": "Response with {length} characters, ending in: …{end}",
   "generation.network": "Could not connect to the provider. Check your connection.",
   "generation.api": "The provider returned an error. Try again.",
   "generation.model": "Model not found. Check the model name in Configure LLM.",

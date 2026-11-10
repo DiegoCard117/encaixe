@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   analyzeFit,
   generateResumeDraft,
+  looksTruncated,
   ResumeDraftSchema,
   type FactBank,
   type ResumeDraft,
@@ -356,7 +357,8 @@ export function useLlmTask() {
     } catch (cause) {
       if (controller.current !== execution || execution.signal.aborted) return;
       if (cause instanceof LlmError) {
-        if (cause.code !== "canceled") setError(`generation.${cause.code}`, cause.detail);
+        if (cause.code !== "canceled")
+          setError(`generation.${cause.code}`, cause.detail && `${t("generation.detail")} ${cause.detail}`);
       } else {
         setError("generation.api");
       }
@@ -396,13 +398,9 @@ export function useLlmTask() {
           </button>
         )}
         {error && (
-          <div role="alert" className="bank-errors">
+          <div role="alert" className="bank-errors w-full">
             <p>{t(error)}</p>
-            {detail && (
-              <p className="break-words font-mono text-xs">
-                {t("generation.detail")} {detail}
-              </p>
-            )}
+            {detail && <p className="break-words font-mono text-xs">{detail}</p>}
             <button
               type="button"
               className="bank-button min-h-10"
@@ -449,21 +447,39 @@ export function useLlmTask() {
   };
 }
 
+/** Erro de leitura da resposta: diz se parece cortada e mostra como ela termina. */
+export function describeParseError(
+  error: "invalid_json" | "invalid_schema",
+  raw: string,
+  t: ReturnType<typeof useI18n>["t"],
+): { key: TranslationKey; detail: string } {
+  return {
+    key: error === "invalid_json" && looksTruncated(raw) ? "generation.truncated" : `generation.${error}`,
+    detail: t("generation.rawDetail", {
+      length: new Intl.NumberFormat().format(raw.length),
+      end: raw.trim().slice(-80).replace(/\s+/g, " "),
+    }),
+  };
+}
+
 export function useGeneration(
   bank: FactBank,
   jobText: string,
   locale: Locale,
   onSuccess: (value: SavedDraft) => void,
 ) {
+  const { t } = useI18n();
   const task = useLlmTask();
   function generate() {
     task.run(async (callLlm) => {
+      let raw = "";
       const { result } = await generateResumeDraft(
         { bank, jobText, fit: analyzeFit(bank, jobText), locale },
-        callLlm,
+        async (messages) => (raw = await callLlm(messages)),
       );
       if (!result.ok) {
-        task.setError(`generation.${result.error}`);
+        const failure = describeParseError(result.error, raw, t);
+        task.setError(failure.key, failure.detail);
         return;
       }
       const value = { draft: result.draft, jobText, locale };

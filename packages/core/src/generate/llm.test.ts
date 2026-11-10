@@ -3,7 +3,7 @@ import { sampleBank } from "../__fixtures__/fact-bank";
 import { analyzeFit } from "../check/fit";
 import { FactBankSchema } from "../schema/bank";
 import { ResumeDraftSchema } from "../schema/resume";
-import { buildResumePrompt, generateResumeDraft, parseResumeDraft } from "./llm";
+import { buildResumePrompt, generateResumeDraft, looksTruncated, parseResumeDraft } from "./llm";
 
 const bank = FactBankSchema.parse(sampleBank);
 const vaga = "Desenvolvedor Python com Django, PostgreSQL e Kubernetes.";
@@ -65,6 +65,24 @@ describe("parseResumeDraft", () => {
       ok: true,
       draft,
     });
+  });
+
+  it("aceita texto antes e depois do JSON, com ou sem cerca", () => {
+    const json = JSON.stringify(draft);
+    expect(parseResumeDraft(`Aqui está o JSON:\n\`\`\`json\n${json}\n\`\`\`\nEspero ter ajudado.`)).toEqual({
+      ok: true,
+      draft,
+    });
+    expect(parseResumeDraft(`Claro! ${json} Qualquer coisa, me avise.`)).toEqual({ ok: true, draft });
+  });
+
+  it("detecta resposta cortada no meio", () => {
+    const json = JSON.stringify(draft);
+    expect(looksTruncated(json.slice(0, -10))).toBe(true);
+    expect(looksTruncated(`\`\`\`json\n${json.slice(0, -10)}`)).toBe(true);
+    expect(looksTruncated(json)).toBe(false);
+    expect(looksTruncated(`\`\`\`json\n${json}\n\`\`\``)).toBe(false);
+    expect(looksTruncated("lixo")).toBe(false);
   });
 
   it("retorna invalid_json para lixo", () => {

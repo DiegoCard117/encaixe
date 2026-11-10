@@ -50,14 +50,35 @@ export type ParseResult =
   | { ok: true; draft: ResumeDraft }
   | { ok: false; error: "invalid_json" | "invalid_schema"; issues: z.core.$ZodIssue[] };
 
+/**
+ * Lê o JSON da resposta da LLM. Tolera o que modelos costumam fazer: cerca ```json e
+ * texto antes ou depois ("Aqui está o JSON:"). Tenta, em ordem: o texto inteiro, o
+ * conteúdo da primeira cerca e o trecho do primeiro "{" ao último "}".
+ */
 export function parseJsonResponse(raw: string): { ok: true; value: unknown } | { ok: false } {
   const trimmed = raw.trim();
-  const fenced = /^```(?:json)?\s*\n?([\s\S]*?)\s*```$/i.exec(trimmed);
-  try {
-    return { ok: true, value: JSON.parse(fenced ? fenced[1]! : trimmed) };
-  } catch {
-    return { ok: false };
+  const fenced = /```(?:json)?\s*\n?([\s\S]*?)\s*```/i.exec(trimmed)?.[1];
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  const braces = start >= 0 && end > start ? trimmed.slice(start, end + 1) : undefined;
+  for (const candidate of [trimmed, fenced, braces]) {
+    if (candidate === undefined) continue;
+    try {
+      return { ok: true, value: JSON.parse(candidate) };
+    } catch {
+      /* Tenta o próximo formato. */
+    }
   }
+  return { ok: false };
+}
+
+/** Resposta que parece cortada no meio: começou um objeto JSON e não fechou. */
+export function looksTruncated(raw: string): boolean {
+  const trimmed = raw
+    .trim()
+    .replace(/```\s*$/, "")
+    .trimEnd();
+  return trimmed.includes("{") && !trimmed.endsWith("}");
 }
 
 export function parseResumeDraft(raw: string): ParseResult {

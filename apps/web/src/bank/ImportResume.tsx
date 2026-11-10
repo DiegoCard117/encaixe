@@ -14,7 +14,7 @@ import {
   type FactBank,
   type SkillFact,
 } from "@encaixe/core";
-import { useLlmTask } from "../generation";
+import { describeParseError, useLlmTask } from "../generation";
 import { useI18n } from "../i18n";
 import FactForm from "./FactForm";
 import ProfileForm from "./ProfileForm";
@@ -187,9 +187,11 @@ export default function ImportResume({
     if (busy || !text.trim()) return;
     setErrors([]);
     llm.run(async (callLlm) => {
-      const parsed = parseExtraction(await callLlm(buildExtractionPrompt({ resumeText: text })));
+      const raw = await callLlm(buildExtractionPrompt({ resumeText: text }));
+      const parsed = parseExtraction(raw);
       if (!parsed.ok) {
-        llm.setError(`generation.${parsed.error}`);
+        const failure = describeParseError(parsed.error, raw, t);
+        llm.setError(failure.key, failure.detail);
         return;
       }
       const merged = mergeExtraction(bank, parsed.extraction);
@@ -506,15 +508,17 @@ export default function ImportResume({
             {t(reading ? "import.reading" : "import.file")}
           </button>
           <p className="text-sm text-muted">{t("import.privacy")}</p>
-          <button
-            type="button"
-            className="bank-button bg-accent-soft text-accent-ink"
-            disabled={busy || !text.trim()}
-            onClick={extract}
-          >
-            {t(llm.busy ? "import.extracting" : "import.extract")}
-          </button>
-          {llm.controls}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="bank-button bg-accent-soft text-accent-ink"
+              disabled={busy || !text.trim()}
+              onClick={extract}
+            >
+              {t(llm.busy ? "import.extracting" : "import.extract")}
+            </button>
+            {llm.controls}
+          </div>
         </div>
       ) : (
         <div className="min-w-0 space-y-5">
