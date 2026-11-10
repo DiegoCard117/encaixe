@@ -2,6 +2,8 @@
 
 Seu currículo, encaixado na vaga. Sem inventar nada.
 
+**Use agora: https://diegocard117.github.io/encaixe/**
+
 O Encaixe gera um currículo adaptado para cada vaga a partir de um **banco de fatos** seu.
 A ferramenta só seleciona, reordena e reescreve fatos reais: cada frase gerada cita o `fact_id` de onde veio,
 e uma checagem em código barra tecnologias e números que não estão nos fatos citados.
@@ -14,7 +16,7 @@ por padrão a chave fica só na aba aberta. Banco de dados remoto (Supabase) é 
 - **Anthropic** (Claude) ou **OpenAI**: pagos por uso; gerar um currículo custa centavos.
 - **Sem pagar**: Gemini, Groq ou OpenRouter têm camadas gratuitas (confira os termos: planos gratuitos podem usar seus dados),
   ou rode um modelo no seu PC com o **Ollama** — nada sai da sua máquina. Para o Ollama aceitar o app, inicie-o com
-  `OLLAMA_ORIGINS` apontando para o endereço do app.
+  `OLLAMA_ORIGINS` apontando para o endereço do app (no site publicado, `https://diegocard117.github.io`).
 
 ## Status
 
@@ -29,7 +31,8 @@ Em desenvolvimento. Acompanhe o [roadmap](https://github.com/users/DiegoCard117/
 - [x] Editor do banco de fatos no navegador, com importação/exportação em JSON
 - [x] Vaga e aderência, geração com a sua chave (Anthropic ou API compatível com OpenAI) e revisão das invenções
 - [x] Exportação em PDF pela impressão do navegador (liberada só com zero invenções)
-- [ ] Importação de currículo antigo, publicação no GitHub Pages
+- [x] Publicação no GitHub Pages a cada push na `main`
+- [ ] Importação de currículo antigo
 
 ## Estrutura
 
@@ -52,7 +55,8 @@ pnpm format
 pnpm --filter @encaixe/web dev   # abre o app em http://localhost:5173 (playground do checador em /#/playground)
 ```
 
-O CI roda `format:check`, `typecheck` e `test` a cada push e pull request.
+O CI roda `format:check`, `typecheck` e `test` a cada push e pull request. Cada push na `main` também publica o
+`apps/web` no GitHub Pages (`.github/workflows/pages.yml`); num fork, ative Pages com a fonte "GitHub Actions".
 
 ## Decisões
 

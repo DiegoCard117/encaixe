@@ -24,7 +24,7 @@ Mudou de ideia? Edite a linha e diga o motivo no commit.
 
 ## Interface
 
-- **React + Vite**, publicado no GitHub Pages.
+- **React + Vite**, publicado no GitHub Pages pelo Actions a cada push na `main`. Pages em vez de Vercel: o app é estático, sem servidor nem variável de ambiente, e fica tudo no GitHub. Build com caminhos relativos (`base: "./"`) e rotas por hash, então funciona em `/encaixe/`, em forks e em domínio próprio sem configuração.
 - **Tailwind** para estilo e **react-hook-form + zod** reaproveitando os schemas do core. Componentes do shadcn/ui só quando precisar.
 - **i18n desde o primeiro componente: pt-BR e en.** Nenhum texto de interface fica fixo no JSX; tudo sai de dicionários tipados por idioma (o TypeScript garante que os dois têm as mesmas chaves), datas e números via `Intl`. Sem biblioteca enquanto isso bastar. Idioma inicial: o do navegador, com troca manual.
 - **O core não fala com o usuário.** Ele devolve códigos (`code`, `value`, `path`), nunca frases; a tradução é da interface. Vale para violações e erros de validação.
