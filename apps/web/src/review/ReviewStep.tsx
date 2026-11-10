@@ -32,10 +32,15 @@ function EditableText({
     ["wrong_context", "unknown_fact", "archived_fact"].includes(code),
   );
   return (
-    <div className={`break-words rounded-lg border p-3 ${badSource ? "border-warn-line" : "border-line"}`}>
+    <div
+      className={`break-words rounded-lg border p-3 print:rounded-none print:border-0 print:p-0 ${badSource ? "border-warn-line" : "border-line"}`}
+    >
+      <p className={`whitespace-pre-wrap ${editing ? "hidden print:block" : ""}`}>
+        {highlight(text, violations)}
+      </p>
       {editing ? (
         <form
-          className="space-y-2"
+          className="space-y-2 print:hidden"
           onSubmit={(event) => {
             event.preventDefault();
             if (!value.trim()) return;
@@ -70,8 +75,7 @@ function EditableText({
         </form>
       ) : (
         <>
-          <p className="whitespace-pre-wrap">{highlight(text, violations)}</p>
-          <div className="mt-2 flex flex-wrap gap-2 text-sm">
+          <div className="mt-2 flex flex-wrap gap-2 text-sm print:hidden">
             <button
               type="button"
               className="bank-button min-h-10"
@@ -113,6 +117,22 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
   const resume = renderResume(bank, draft, locale);
   const relevant = (prefix: (string | number)[]) =>
     violations.filter(({ path }) => prefix.every((part, i) => path[i] === part));
+  function exportPdf() {
+    if (violations.length) return;
+    const previousTitle = document.title;
+    const restoreTitle = () => {
+      document.title = previousTitle;
+      window.removeEventListener("afterprint", restoreTitle);
+    };
+    window.addEventListener("afterprint", restoreTitle);
+    document.title = t("review.pdfFilename", { name: resume.profile.fullName });
+    try {
+      window.print();
+    } catch (error) {
+      restoreTitle();
+      throw error;
+    }
+  }
   function update(next: ResumeDraft) {
     const value = { ...saved, draft: next };
     setSaved(value);
@@ -127,7 +147,7 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
     return `${date(value.start)} – ${value.end === null ? resumePresent(locale) : date(value.end)}`;
   }
   return (
-    <section aria-busy={generation.busy} className="space-y-6">
+    <section aria-busy={generation.busy} className="resume-review space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-display text-2xl font-semibold">{t("editor.step3")}</h2>
         <span
@@ -150,11 +170,17 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
         >
           {t(generation.busy ? "generation.busy" : "review.regenerate")}
         </button>
-        <button type="button" className="bank-button min-h-10" disabled aria-describedby="pdf-help">
+        <button
+          type="button"
+          className="bank-button min-h-10"
+          disabled={violations.length > 0}
+          aria-describedby="pdf-help"
+          onClick={exportPdf}
+        >
           {t("review.pdf")}
         </button>
         <p id="pdf-help" className="text-sm text-muted">
-          {t(violations.length ? "review.pdfBlocked" : "editor.soon")}
+          {t(violations.length ? "review.pdfBlocked" : "review.pdfHelp")}
         </p>
         {generation.controls}
       </div>
@@ -163,11 +189,11 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
           {t("generation.storage")}
         </p>
       )}
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <div className="resume-layout grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <article
           lang={locale}
           aria-label={t("check.preview")}
-          className="min-w-0 space-y-5 rounded-lg bg-[var(--paper)] p-5 text-[var(--paper-ink)] [color-scheme:light] sm:p-10"
+          className="resume-paper min-w-0 space-y-5 rounded-lg bg-[var(--paper)] p-5 text-[var(--paper-ink)] [color-scheme:light] sm:p-10"
         >
           <header className="space-y-2 border-b border-line pb-5">
             <h3 className="font-display text-2xl font-semibold">{resume.profile.fullName}</h3>
@@ -221,13 +247,15 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
                   section === "projects" ? resume.projects.find((e) => e.factId === entry.factId) : undefined;
                 const source = experience ?? project;
                 return (
-                  <div key={`${entryIndex}-${entry.factId}`} className="space-y-2">
+                  <div key={`${entryIndex}-${entry.factId}`} className="resume-entry space-y-2">
                     <h5 className="font-semibold">
-                      {experience
-                        ? `${experience.role} · ${experience.company}`
-                        : project
-                          ? [project.name, project.role].filter(Boolean).join(" · ")
-                          : entry.factId}
+                      {experience ? (
+                        `${experience.role} · ${experience.company}`
+                      ) : project ? (
+                        [project.name, project.role].filter(Boolean).join(" · ")
+                      ) : (
+                        <span className="print:hidden">{entry.factId}</span>
+                      )}
                     </h5>
                     {source?.period && <p className="text-sm">{period(source.period)}</p>}
                     <ul className="space-y-2">
@@ -289,7 +317,7 @@ function Review({ bank, initial }: { bank: FactBank; initial: SavedDraft }) {
             <section className="space-y-3">
               <h4 className="font-display text-lg font-semibold">{t("editor.education")}</h4>
               {resume.education.map((education, i) => (
-                <div key={`${i}-${education.factId}`}>
+                <div key={`${i}-${education.factId}`} className="resume-entry">
                   <h5 className="font-semibold">
                     {education.title} · {education.institution}
                   </h5>

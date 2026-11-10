@@ -28,7 +28,8 @@ Em desenvolvimento. Acompanhe o [roadmap](https://github.com/users/DiegoCard117/
 - [x] Prompt e validação da resposta da LLM (sem depender de provedor) e renderização do currículo com dados reais
 - [x] Editor do banco de fatos no navegador, com importação/exportação em JSON
 - [x] Vaga e aderência, geração com a sua chave (Anthropic ou API compatível com OpenAI) e revisão das invenções
-- [ ] Exportação em PDF, importação de currículo antigo, publicação no GitHub Pages
+- [x] Exportação em PDF pela impressão do navegador (liberada só com zero invenções)
+- [ ] Importação de currículo antigo, publicação no GitHub Pages
 
 ## Estrutura
 

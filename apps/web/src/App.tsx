@@ -27,8 +27,8 @@ export default function App() {
     setThemePref(next);
   }
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-8 sm:py-12 [&_:focus-visible]:outline-2 [&_:focus-visible]:outline-offset-2 [&_:focus-visible]:outline-accent">
-      <header className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-line pb-6">
+    <main className="app-shell mx-auto max-w-7xl px-4 py-8 sm:px-8 sm:py-12 [&_:focus-visible]:outline-2 [&_:focus-visible]:outline-offset-2 [&_:focus-visible]:outline-accent">
+      <header className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-line pb-6 print:hidden">
         <div>
           <div className="flex items-center gap-3">
             <svg viewBox="0 0 28 28" className="size-10" aria-hidden="true">
@@ -58,7 +58,7 @@ export default function App() {
           </button>
         </div>
       </header>
-      <nav className="mb-8 flex flex-wrap items-center gap-3" aria-label={t("editor.steps")}>
+      <nav className="mb-8 flex flex-wrap items-center gap-3 print:hidden" aria-label={t("editor.steps")}>
         <a
           className="bank-button bg-accent-soft text-accent-ink"
           href="#/"

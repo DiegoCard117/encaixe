@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@page {
+  size: A4;
+  margin: 16mm;
+}
+
 :root {
   color-scheme: light dark;
   --bg: #f6f6f3;
@@ -136,5 +141,56 @@
   }
   .bank-check input {
     @apply size-5 shrink-0 accent-accent;
+  }
+}
+
+@media print {
+  :root,
+  :root[data-theme] {
+    color-scheme: light;
+  }
+
+  body {
+    background: white;
+    color: var(--paper-ink);
+  }
+
+  .app-shell,
+  .resume-review,
+  .resume-layout,
+  .resume-paper {
+    display: block;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .resume-review > :not(.resume-layout),
+  .resume-layout > :not(.resume-paper) {
+    display: none;
+  }
+
+  .resume-paper {
+    background: white;
+    color: var(--paper-ink);
+    color-scheme: light;
+  }
+
+  .resume-paper * {
+    color: inherit;
+    background: transparent;
+    border-color: var(--paper-ink);
+  }
+
+  .resume-paper a {
+    text-decoration: none;
+  }
+
+  .resume-entry {
+    break-inside: avoid;
   }
 }
