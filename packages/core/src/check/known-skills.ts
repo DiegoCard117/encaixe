@@ -133,3 +133,27 @@ export const KNOWN_SKILLS: readonly string[] = [
   "DevOps",
   "MLOps",
 ];
+
+/**
+ * Quem tem a skill da direita sabe a da esquerda: "SQL" na vaga é atendida por MySQL no banco.
+ * Só relações óbvias e de mão única (MySQL não cobre SQLite). Usado na aderência, para não
+ * tratar como lacuna — e não mandar a LLM evitar — algo que a pessoa sabe.
+ */
+export const IMPLIED_SKILLS: Readonly<Record<string, readonly string[]>> = {
+  SQL: ["MySQL", "PostgreSQL", "Postgres", "SQLite", "SQL Server", "MariaDB", "Oracle"],
+  JavaScript: [
+    "TypeScript",
+    "React",
+    "React Native",
+    "Next.js",
+    "Node.js",
+    "NodeJS",
+    "Vue",
+    "Angular",
+    "Nuxt",
+  ],
+  Python: ["Django", "Flask", "FastAPI", "Pandas"],
+  Java: ["Spring", "Spring Boot"],
+  CSS: ["Tailwind CSS", "Sass"],
+  Git: ["GitHub", "GitLab"],
+};

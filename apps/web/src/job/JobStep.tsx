@@ -80,8 +80,8 @@ export default function JobStep({ bank }: { bank: FactBank }) {
             </h3>
             <p aria-live="polite">
               {t("job.count", {
-                count: number(fit.matchedSkills.length),
-                total: number(fit.matchedSkills.length + fit.gaps.length),
+                count: number(fit.matchedSkills.length + fit.impliedSkills.length),
+                total: number(fit.matchedSkills.length + fit.impliedSkills.length + fit.gaps.length),
               })}
             </p>
             <ul className="grid gap-3 sm:grid-cols-2">
@@ -91,29 +91,42 @@ export default function JobStep({ bank }: { bank: FactBank }) {
                   <p className="text-sm">{t("job.factsCount", { count: number(skill.factIds.length) })}</p>
                 </li>
               ))}
+              {fit.impliedSkills.map((skill) => (
+                <li key={skill.term} className="rounded-lg bg-accent-soft p-3 text-accent-ink">
+                  <p className="font-medium">{skill.term}</p>
+                  <p className="text-sm">{t("job.impliedVia", { via: skill.via.join(", ") })}</p>
+                </li>
+              ))}
             </ul>
             <h4 className="font-semibold">{t("job.gaps")}</h4>
-            <ul className="space-y-3">
+            {/* Uma lacuna por linha: nome à esquerda, "Tenho"/"Não tenho" à direita. */}
+            <ul className="divide-y divide-warn-line rounded-lg border border-warn-line bg-warn-soft text-warn-ink">
               {fit.gaps
                 .filter((gap) => !dismissed.includes(gap))
                 .map((gap) => (
-                  <li key={gap} className="rounded-lg border border-warn-line bg-warn-soft p-3 text-warn-ink">
-                    <p>{gap}</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <a className="bank-button min-h-10" href="#/">
-                        {t("job.addFact")}
+                  <li key={gap} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                    <span className="min-w-0 break-words font-medium">{gap}</span>
+                    <span className="flex gap-2">
+                      <a
+                        className="bank-button min-h-10"
+                        href="#/"
+                        aria-label={`${t("job.addFact")} · ${gap}`}
+                      >
+                        {t("job.have")}
                       </a>
                       <button
                         type="button"
                         className="bank-button min-h-10"
+                        aria-label={`${t("job.dismiss")} · ${gap}`}
                         onClick={() => setDismissed([...dismissed, gap])}
                       >
                         {t("job.dismiss")}
                       </button>
-                    </div>
+                    </span>
                   </li>
                 ))}
             </ul>
+            <p className="text-xs text-muted">{t("job.gapsHelp")}</p>
           </section>
           <section className="bank-card space-y-3">
             <h3 className="font-display text-xl">{t("job.relevant")}</h3>

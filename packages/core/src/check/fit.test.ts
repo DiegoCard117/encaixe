@@ -29,6 +29,7 @@ describe("analyzeFit", () => {
           factIds: ["exp_coop-dev", "prj_balance"],
         },
       ],
+      impliedSkills: [],
       gaps: ["Docker", "AWS"],
       rankedFacts: [
         {
@@ -89,11 +90,26 @@ describe("analyzeFit", () => {
     const bank = FactBankSchema.parse(sampleBank);
     bank.facts.find((fact) => fact.id === "skl_python")!.archived = true;
 
+    // Python arquivado não casa direto; Django (ativo) ainda implica Python.
     expect(analyzeFit(bank, "Python")).toEqual({
       matchedSkills: [],
-      gaps: ["Python"],
+      impliedSkills: [{ term: "Python", via: ["Django"] }],
+      gaps: [],
       rankedFacts: [],
     });
+    bank.facts.find((fact) => fact.id === "skl_django")!.archived = true;
+    expect(analyzeFit(bank, "Python").gaps).toEqual(["Python"]);
+  });
+
+  it("caso real: SQL atendida por MySQL; MySQL não cobre SQLite", () => {
+    const bank = FactBankSchema.parse({
+      ...sampleBank,
+      facts: [{ id: "skl_mysql", kind: "skill", name: "MySQL", category: "database" }],
+    });
+    const result = analyzeFit(bank, "Requisitos: SQL, MySQL, SQLite e Docker.");
+    expect(result.matchedSkills.map((skill) => skill.term)).toEqual(["MySQL"]);
+    expect(result.impliedSkills).toEqual([{ term: "SQL", via: ["MySQL"] }]);
+    expect(result.gaps).toEqual(["SQLite", "Docker"]);
   });
 
   it("respeita fronteiras Unicode entre Java e JavaScript", () => {
@@ -110,6 +126,7 @@ describe("analyzeFit", () => {
 
     expect(analyzeFit(bank, "JavaScript")).toEqual({
       matchedSkills: [],
+      impliedSkills: [],
       gaps: ["JavaScript"],
       rankedFacts: [],
     });
@@ -146,6 +163,7 @@ describe("analyzeFit", () => {
   it("retorna tudo vazio para vaga vazia", () => {
     expect(analyzeFit(FactBankSchema.parse(sampleBank), "")).toEqual({
       matchedSkills: [],
+      impliedSkills: [],
       gaps: [],
       rankedFacts: [],
     });

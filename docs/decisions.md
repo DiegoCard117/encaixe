@@ -16,7 +16,7 @@ Mudou de ideia? Edite a linha e diga o motivo no commit.
 - **Modelos vêm do provedor, não de uma lista fixa.** Nomes mudam e variam por conta (ex.: modelo antigo indisponível para contas novas). O app lê `/models`, ordena por preferência (no Gemini, flash antes de flash-lite, versão mais nova primeiro) e guarda um plano B: os próximos da lista e sempre um modelo leve (lite/mini/haiku). Só erro de modelo indisponível ou sobrecarregado aciona o plano B; chave inválida, limite de uso e recusa param na hora.
 - **Chave da API só na sessão por padrão**, com opção explícita de lembrar neste navegador.
 - **Toda chamada à LLM tem tempo limite de 5 minutos e pode ser cancelada.** O limite vale para a chamada inteira, incluindo as tentativas do plano B. Modelo local lento ou servidor travado não prende a tela.
-- **Aderência fato × vaga determinística** (termos, skills e tags), sem embeddings: explicável, offline e testável.
+- **Aderência fato × vaga determinística** (termos, skills e tags), sem embeddings: explicável, offline e testável. Skills implícitas por uma lista curta e explícita (`IMPLIED_SKILLS`: SQL via MySQL/PostgreSQL, JavaScript via TypeScript/React, Python via Django…) contam como atendidas, não como lacuna — e por isso a LLM não é instruída a evitá-las. Só relações óbvias e de mão única.
 - **Sem telemetria.**
 - **Apoio discreto: Pix (chave aleatória) e GitHub Sponsors.** Pix para quem usa no Brasil, Sponsors para quem chega pelo GitHub e de fora. No app só um link no rodapé e uma linha depois de exportar o PDF, nunca pop-up nem pedido antes de entregar valor. Dados em `apps/web/src/support.ts`; vazio esconde.
 

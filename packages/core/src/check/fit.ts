@@ -1,12 +1,14 @@
 import type { FactBank } from "../schema/bank";
 import type { SkillFact } from "../schema/facts";
-import { KNOWN_SKILLS } from "./known-skills";
+import { IMPLIED_SKILLS, KNOWN_SKILLS } from "./known-skills";
 import { createMentionFinder } from "./mentions";
 
 export interface FitAnalysis {
   /** Skills do banco mencionadas na vaga, na ordem da 1ª menção. */
   matchedSkills: { skillId: string; term: string; factIds: string[] }[];
-  /** Tecnologias conhecidas mencionadas na vaga que não existem no banco (nem como nome nem como apelido). Só informativo. */
+  /** Tecnologias da vaga que o banco não tem, mas que uma skill do banco implica (ex.: SQL via MySQL). */
+  impliedSkills: { term: string; via: string[] }[];
+  /** Tecnologias conhecidas mencionadas na vaga que não existem no banco (nem como nome nem como apelido) nem são implicadas. Só informativo. */
   gaps: string[];
   /** Fatos relevantes, maior score primeiro; score 0 fica de fora. */
   rankedFacts: { factId: string; score: number; skillIds: string[]; tags: string[] }[];
@@ -42,7 +44,13 @@ export function analyzeFit(bank: FactBank, jobText: string): FitAnalysis {
   }
 
   const knownNames = new Map(KNOWN_SKILLS.map((name) => [fold(name), name]));
+  const implied = new Map<string, string[]>();
+  for (const [skill, implying] of Object.entries(IMPLIED_SKILLS)) {
+    const via = [...new Set(implying.flatMap((name) => names.get(fold(name))?.name ?? []))];
+    if (via.length) implied.set(fold(skill), via);
+  }
   const gaps = new Set<string>();
+  const impliedSkills: FitAnalysis["impliedSkills"] = [];
   for (const mention of createMentionFinder(knownNames.keys())(jobText)) {
     if (names.has(mention.key)) continue;
     const overlaps = mentions.some(
@@ -51,7 +59,10 @@ export function analyzeFit(bank: FactBank, jobText: string): FitAnalysis {
         matched.index < mention.index + mention.match.length,
     );
     const name = knownNames.get(mention.key);
-    if (!overlaps && name) gaps.add(name);
+    if (overlaps || !name) continue;
+    const via = implied.get(mention.key);
+    if (!via) gaps.add(name);
+    else if (!impliedSkills.some((item) => item.term === name)) impliedSkills.push({ term: name, via });
   }
 
   const normalizedJob = foldTag(jobText);
@@ -65,5 +76,5 @@ export function analyzeFit(bank: FactBank, jobText: string): FitAnalysis {
     if (score) rankedFacts.push({ factId: fact.id, score, skillIds, tags });
   }
   rankedFacts.sort((a, b) => b.score - a.score);
-  return { matchedSkills, gaps: [...gaps], rankedFacts };
+  return { matchedSkills, impliedSkills, gaps: [...gaps], rankedFacts };
 }

@@ -136,7 +136,7 @@ describe("CLI", () => {
     expect(await run(["fit", "bank.json", "job.txt", "--json"], output.io)).toBe(0);
     expect(JSON.parse(output.stdout[1]!)).toEqual({
       ok: true,
-      fit: { matchedSkills: [], gaps: [], rankedFacts: [] },
+      fit: { matchedSkills: [], impliedSkills: [], gaps: [], rankedFacts: [] },
     });
   });
 

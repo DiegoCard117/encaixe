@@ -182,6 +182,10 @@ export async function run(argv: string[], io: IO): Promise<number> {
       return skill?.kind === "skill" ? skill.name : skillId;
     });
     io.stdout(`${dictionary.cli.matchedSkills}: ${skillNames.join(", ") || dictionary.cli.none}`);
+    if (fit.impliedSkills.length)
+      io.stdout(
+        `${dictionary.cli.implied}: ${fit.impliedSkills.map(({ term, via }) => `${term} (${via.join(", ")})`).join(", ")}`,
+      );
     io.stdout(`${dictionary.cli.gaps}: ${fit.gaps.join(", ") || dictionary.cli.none}`);
     io.stdout(`${dictionary.cli.rankedFacts}:`);
     if (!fit.rankedFacts.length) io.stdout(dictionary.cli.none);
