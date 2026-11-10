@@ -6,8 +6,15 @@ O Encaixe gera um currículo adaptado para cada vaga a partir de um **banco de f
 A ferramenta só seleciona, reordena e reescreve fatos reais: cada frase gerada cita o `fact_id` de onde veio,
 e uma checagem em código barra tecnologias e números que não estão nos fatos citados.
 
-Roda 100% no navegador, sem conta e sem servidor. A LLM é chamada direto do seu navegador com a sua própria chave
-(Anthropic ou OpenAI); por padrão a chave fica só na aba aberta. Banco de dados remoto (Supabase) é opcional.
+Roda 100% no navegador, sem conta e sem servidor. A LLM é chamada direto do seu navegador com a sua própria chave;
+por padrão a chave fica só na aba aberta. Banco de dados remoto (Supabase) é opcional.
+
+### Qual LLM usar
+
+- **Anthropic** (Claude) ou **OpenAI**: pagos por uso; gerar um currículo custa centavos.
+- **Sem pagar**: Gemini, Groq ou OpenRouter têm camadas gratuitas (confira os termos: planos gratuitos podem usar seus dados),
+  ou rode um modelo no seu PC com o **Ollama** — nada sai da sua máquina. Para o Ollama aceitar o app, inicie-o com
+  `OLLAMA_ORIGINS` apontando para o endereço do app.
 
 ## Status
 
@@ -20,7 +27,7 @@ Em desenvolvimento. Acompanhe o [roadmap](https://github.com/users/DiegoCard117/
 - [x] Aderência fato × vaga: skills que batem, lacunas e fatos mais relevantes
 - [x] Prompt e validação da resposta da LLM (sem depender de provedor) e renderização do currículo com dados reais
 - [x] Editor do banco de fatos no navegador, com importação/exportação em JSON
-- [x] Vaga e aderência, geração com a sua chave (Anthropic ou OpenAI) e revisão das invenções
+- [x] Vaga e aderência, geração com a sua chave (Anthropic ou API compatível com OpenAI) e revisão das invenções
 - [ ] Exportação em PDF, importação de currículo antigo, publicação no GitHub Pages
 
 ## Estrutura

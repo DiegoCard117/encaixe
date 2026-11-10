@@ -11,7 +11,7 @@ Mudou de ideia? Edite a linha e diga o motivo no commit.
 
 - **Core puro.** `packages/core` não tem UI, disco, rede nem DOM. Web e CLI são cascas finas sobre ele.
 - **LLM com a chave do usuário, direto do navegador.** Sem backend nosso: custo zero e nenhum dado passa por servidor do projeto.
-- **O usuário escolhe o provedor de LLM: Anthropic ou OpenAI.** Chamada direta do navegador: Anthropic pelo SDK oficial (`@anthropic-ai/sdk` com `dangerouslyAllowBrowser`, modelo padrão Claude Opus 5.5 e fallback do servidor em caso de recusa), OpenAI por `fetch`. O core recebe a função de chamada, então novos provedores entram sem mexer na lógica.
+- **O usuário escolhe o provedor de LLM: Anthropic ou qualquer API compatível com OpenAI.** Chamada direta do navegador: Anthropic pelo SDK oficial (`@anthropic-ai/sdk` com `dangerouslyAllowBrowser`, carregado sob demanda, modelo padrão Claude Opus 5.5 e fallback do servidor em caso de recusa); compatível com OpenAI por `fetch`, com atalhos para OpenAI, Gemini, Groq, OpenRouter e Ollama, para que o app possa ser usado sem pagar (camadas gratuitas ou modelo local). O core recebe a função de chamada, então novos provedores entram sem mexer na lógica.
 - **Chave da API só na sessão por padrão**, com opção explícita de lembrar neste navegador.
 - **Aderência fato × vaga determinística** (termos, skills e tags), sem embeddings: explicável, offline e testável.
 - **Sem telemetria.**

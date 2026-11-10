@@ -1,8 +1,34 @@
 import type { CallLlm } from "@encaixe/core";
 
-export type Provider = "anthropic" | "openai";
+export type Provider = "anthropic" | "openai-compatible";
+export const presets = {
+  openai: "https://api.openai.com/v1",
+  gemini: "https://generativelanguage.googleapis.com/v1beta/openai",
+  groq: "https://api.groq.com/openai/v1",
+  openrouter: "https://openrouter.ai/api/v1",
+  ollama: "http://localhost:11434/v1",
+} as const;
+
+export function isLocalBaseUrl(baseUrl: string): boolean {
+  try {
+    return ["localhost", "127.0.0.1"].includes(new URL(baseUrl).hostname);
+  } catch {
+    return false;
+  }
+}
+
+export function isValidBaseUrl(baseUrl: string): boolean {
+  try {
+    const url = new URL(baseUrl);
+    return url.protocol === "https:" || (url.protocol === "http:" && isLocalBaseUrl(baseUrl));
+  } catch {
+    return false;
+  }
+}
+
 export interface LlmSettings {
   provider: Provider;
+  baseUrl: string;
   model: string;
   apiKey: string;
   remember: boolean;
@@ -23,16 +49,31 @@ export function loadLlmSettings(): LlmSettings | undefined {
     try {
       const storage = persistent ? localStorage : sessionStorage;
       const value = JSON.parse(storage.getItem(key) ?? "null");
+      if (value?.provider === "openai") {
+        value.provider = "openai-compatible";
+        value.baseUrl ??= presets.openai;
+      }
+      if (value?.provider === "anthropic" && typeof value.baseUrl !== "string") {
+        value.baseUrl = presets.openai;
+      }
       if (
         value &&
-        (value.provider === "anthropic" || value.provider === "openai") &&
+        (value.provider === "anthropic" || value.provider === "openai-compatible") &&
+        typeof value.baseUrl === "string" &&
+        (value.provider === "anthropic" || isValidBaseUrl(value.baseUrl)) &&
         typeof value.model === "string" &&
         value.model.trim() &&
         typeof value.apiKey === "string" &&
-        value.apiKey.trim() &&
+        (value.apiKey.trim() || (value.provider === "openai-compatible" && isLocalBaseUrl(value.baseUrl))) &&
         typeof value.remember === "boolean"
       )
-        return { provider: value.provider, model: value.model, apiKey: value.apiKey, remember: persistent };
+        return {
+          provider: value.provider,
+          baseUrl: value.baseUrl,
+          model: value.model,
+          apiKey: value.apiKey,
+          remember: persistent,
+        };
     } catch {
       /* Storage may be unavailable. */
     }
@@ -51,6 +92,9 @@ export function clearLlmSettings(): void {
   }
 }
 export function saveLlmSettings(s: LlmSettings): void {
+  if (s.provider === "openai-compatible" && !isValidBaseUrl(s.baseUrl)) return;
+  if (!s.model.trim() || (!s.apiKey.trim() && (s.provider === "anthropic" || !isLocalBaseUrl(s.baseUrl))))
+    return;
   clearLlmSettings();
   try {
     (s.remember ? localStorage : sessionStorage).setItem(key, JSON.stringify(s));
@@ -61,7 +105,7 @@ export function saveLlmSettings(s: LlmSettings): void {
 export function createCallLlm(s: LlmSettings): CallLlm {
   return async (messages) => {
     if (s.provider === "anthropic") {
-      // SDK carregado só quando usado: metade do bundle, e quem usa OpenAI nunca baixa.
+      // SDK carregado só quando usado: quem usa uma API compatível nunca baixa.
       let Anthropic: typeof import("@anthropic-ai/sdk").default;
       try {
         ({ default: Anthropic } = await import("@anthropic-ai/sdk"));
@@ -94,18 +138,31 @@ export function createCallLlm(s: LlmSettings): CallLlm {
     }
     let res: Response;
     try {
-      res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.apiKey}` },
-        body: JSON.stringify({
-          model: s.model,
-          messages: [
-            { role: "system", content: messages.system },
-            { role: "user", content: messages.user },
-          ],
-          response_format: { type: "json_object" },
-        }),
-      });
+      const url = `${s.baseUrl.trim().replace(/\/+$/, "")}/chat/completions`;
+      const body = {
+        model: s.model,
+        messages: [
+          { role: "system", content: messages.system },
+          { role: "user", content: messages.user },
+        ],
+      };
+      const request = (jsonFormat: boolean) =>
+        fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(s.apiKey.trim() ? { Authorization: `Bearer ${s.apiKey.trim()}` } : {}),
+          },
+          body: JSON.stringify({
+            ...body,
+            ...(jsonFormat ? { response_format: { type: "json_object" } } : {}),
+          }),
+        });
+      res = await request(true);
+      if (res.status === 400 && (await res.clone().text()).includes("response_format")) {
+        // ponytail: alguns modelos não aceitam response_format; tentar só uma vez sem ele.
+        res = await request(false);
+      }
     } catch {
       throw new LlmError("network");
     }

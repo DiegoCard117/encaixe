@@ -11,8 +11,11 @@ import { Modal } from "./bank/ui";
 import {
   clearLlmSettings,
   createCallLlm,
+  isLocalBaseUrl,
+  isValidBaseUrl,
   LlmError,
   loadLlmSettings,
+  presets,
   saveLlmSettings,
   type LlmSettings,
 } from "./llm";
@@ -48,26 +51,44 @@ function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSe
     () =>
       loadLlmSettings() ?? {
         provider: "anthropic",
+        baseUrl: presets.openai,
         model: "claude-opus-5-5",
         apiKey: "",
         remember: false,
       },
   );
+  const [preset, setPreset] = useState<keyof typeof presets | "custom">(
+    () =>
+      (Object.keys(presets) as (keyof typeof presets)[]).find((name) => presets[name] === settings.baseUrl) ??
+      "custom",
+  );
+  const [error, setError] = useState<TranslationKey>();
+  const compatible = settings.provider === "openai-compatible";
+  const keyRequired = !compatible || !isLocalBaseUrl(settings.baseUrl);
   return (
     <Modal title={t("llm.title")} onClose={onClose}>
       <form
         className="space-y-4"
         onSubmit={(event) => {
           event.preventDefault();
-          if (!settings.model.trim() || !settings.apiKey.trim()) return;
-          const value = { ...settings, model: settings.model.trim(), apiKey: settings.apiKey.trim() };
+          if (compatible && !isValidBaseUrl(settings.baseUrl)) {
+            setError("llm.invalidBaseUrl");
+            return;
+          }
+          if (!settings.model.trim() || (keyRequired && !settings.apiKey.trim())) return;
+          const value = {
+            ...settings,
+            baseUrl: settings.baseUrl.trim(),
+            model: settings.model.trim(),
+            apiKey: settings.apiKey.trim(),
+          };
           saveLlmSettings(value);
           onSave(value);
         }}
       >
         <fieldset>
           <legend>{t("llm.provider")}</legend>
-          {(["anthropic", "openai"] as const).map((provider) => (
+          {(["anthropic", "openai-compatible"] as const).map((provider) => (
             <label className="flex min-h-10 items-center gap-2" key={provider}>
               <input
                 type="radio"
@@ -86,6 +107,50 @@ function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSe
             </label>
           ))}
         </fieldset>
+        {compatible && (
+          <>
+            <label className="block">
+              {t("llm.preset")}
+              <select
+                className="rounded-lg border border-line bg-bg p-3 text-ink min-h-10 w-full"
+                value={preset}
+                onChange={(e) => {
+                  const name = e.target.value as keyof typeof presets | "custom";
+                  setPreset(name);
+                  setError(undefined);
+                  if (name !== "custom") setSettings({ ...settings, baseUrl: presets[name] });
+                }}
+              >
+                {(Object.keys(presets) as (keyof typeof presets)[]).map((name) => (
+                  <option key={name} value={name}>
+                    {t(`llm.preset.${name}`)}
+                  </option>
+                ))}
+                <option value="custom">{t("llm.preset.custom")}</option>
+              </select>
+            </label>
+            <label className="block">
+              {t("llm.baseUrl")}
+              <input
+                className="rounded-lg border border-line bg-bg p-3 text-ink min-h-10 w-full"
+                required
+                value={settings.baseUrl}
+                aria-invalid={error === "llm.invalidBaseUrl"}
+                aria-describedby={error === "llm.invalidBaseUrl" ? "llm-url-error" : undefined}
+                onChange={(e) => {
+                  setSettings({ ...settings, baseUrl: e.target.value });
+                  setPreset("custom");
+                  setError(undefined);
+                }}
+              />
+            </label>
+            {error && (
+              <p id="llm-url-error" role="alert" className="bank-errors">
+                {t(error)}
+              </p>
+            )}
+          </>
+        )}
         <label className="block">
           {t("llm.model")}
           {settings.provider === "anthropic" ? (
@@ -103,17 +168,23 @@ function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSe
               className="rounded-lg border border-line bg-bg p-3 text-ink min-h-10 w-full"
               required
               value={settings.model}
+              aria-describedby="llm-model-hint"
               onChange={(e) => setSettings({ ...settings, model: e.target.value })}
             />
           )}
         </label>
+        {compatible && (
+          <p id="llm-model-hint" className="text-sm text-muted">
+            {t(`llm.modelHint.${preset}`)}
+          </p>
+        )}
         <label className="block">
-          {t("llm.key")}
+          {t(compatible ? "llm.compatibleKey" : "llm.key")}
           <input
             className="rounded-lg border border-line bg-bg p-3 text-ink min-h-10 w-full"
             type="password"
             autoComplete="off"
-            required
+            required={keyRequired}
             value={settings.apiKey}
             onChange={(e) => setSettings({ ...settings, apiKey: e.target.value })}
           />
@@ -127,6 +198,14 @@ function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSe
           {t("llm.remember")}
         </label>
         <p className="text-sm text-muted">{t("llm.privacy")}</p>
+        {compatible && (
+          <>
+            {preset === "ollama" && (
+              <p className="text-sm text-muted">{t("llm.ollamaHelp", { origin: location.origin })}</p>
+            )}
+            <p className="text-sm text-muted">{t("llm.freePlans")}</p>
+          </>
+        )}
         <div className="flex flex-wrap gap-2">
           <button className="bank-button min-h-10" type="submit">
             {t("editor.save")}
