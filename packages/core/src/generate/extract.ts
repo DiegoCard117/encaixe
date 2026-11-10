@@ -186,7 +186,14 @@ export function checkExtractedFact(
   skills: ReadonlyMap<string, SkillFact>,
 ): { code: "unsupported_number" | "unsupported_skill"; value: string }[] {
   const alerts: ReturnType<typeof checkExtractedFact> = [];
-  const supported = new Set(numbers(resumeText).map((number) => number.value));
+  // Contatos não servem de prova: dígitos de telefone, e-mail ou URL não "apoiam" números inventados.
+  const evidence = resumeText
+    .replace(/\b[\w.+-]+@[\w.-]+\.[a-z]{2,}\b/gi, " ")
+    // Domínio começa com letra: "2.5mi" não é endereço.
+    .replace(/(?:https?:\/\/|www\.)\S+|\b[a-z][\w-]*(?:\.[\w-]+)*\.[a-z]{2,}(?:\/\S*)?/gi, " ")
+    // Telefone tem 9+ dígitos; "2016 - 2020" (8) é intervalo de anos e fica.
+    .replace(/\+?\d[\d\t ().-]{6,}\d/g, (match) => (match.replace(/\D/g, "").length >= 9 ? " " : match));
+  const supported = new Set(numbers(evidence).map((number) => number.value));
   const texts = textFields(fact);
   if ("metrics" in fact) texts.push(...fact.metrics.map((metric) => String(metric.value)));
   if ("period" in fact && fact.period) {

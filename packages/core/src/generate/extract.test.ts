@@ -172,6 +172,36 @@ describe("mergeExtraction", () => {
 
 describe("checkExtractedFact", () => {
   const skills = new Map([[skill.id, skill]]);
+  it("não usa números de contato como apoio, mas aceita números do texto", () => {
+    const fact = FactSchema.parse({ ...project, description: "11 projetos", skillIds: [] });
+    for (const contact of [
+      "(11) 98765-4321",
+      "+55 (11) 98765-4321",
+      "ana11@example.com",
+      "https://example.com/11",
+      "example.com/11",
+    ]) {
+      expect(checkExtractedFact(contact, fact, new Map())).toEqual([
+        { code: "unsupported_number", value: "11" },
+      ]);
+      expect(checkExtractedFact(`${contact}\nEntreguei 11 projetos.`, fact, new Map())).toEqual([]);
+    }
+  });
+
+  it("não confunde intervalo de anos nem valor como 2.5mi com contato", () => {
+    const education = FactSchema.parse({
+      id: "edu_001",
+      kind: "education",
+      institution: "USP",
+      title: "Computação",
+      type: "bachelor",
+      status: "completed",
+      period: { start: "2016-01", end: "2020-01" },
+    });
+    expect(checkExtractedFact("Computação - USP (2016 - 2020)", education, new Map())).toEqual([]);
+    const revenue = FactSchema.parse({ ...project, description: "Receita de R$ 2.5mi", skillIds: [] });
+    expect(checkExtractedFact("Gerei R$ 2.5mi em receita", revenue, new Map())).toEqual([]);
+  });
   it("sinaliza números e skills ausentes", () => {
     expect(checkExtractedFact("Ana Silva", achievement, skills)).toEqual([
       { code: "unsupported_number", value: "40" },

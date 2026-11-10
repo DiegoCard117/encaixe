@@ -190,6 +190,15 @@ export async function currentEmail(): Promise<string | undefined> {
     throw syncError(error);
   }
 }
+export async function verifyCode(email: string, token: string): Promise<void> {
+  try {
+    const client = await configuredClient();
+    const { error } = await client.auth.verifyOtp({ email, token, type: "email" });
+    if (error) throw error;
+  } catch (error) {
+    throw syncError(error);
+  }
+}
 export async function signOut(): Promise<void> {
   try {
     const client = await configuredClient();

@@ -85,7 +85,6 @@ function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSe
     setModels([]);
     setListError(undefined);
     setListing(false);
-    setManualModel(false);
     if (!canList) return;
     const timer = setTimeout(async () => {
       setListing(true);
@@ -97,13 +96,7 @@ function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSe
         );
         if (controller.signal.aborted) return;
         setModels(ids);
-        const recommended = ids[0];
-        if (recommended !== undefined) {
-          setSettings((current) => ({
-            ...current,
-            model: ids.includes(current.model) ? current.model : recommended,
-          }));
-        }
+        setSettings((current) => ({ ...current, model: current.model || ids[0] || "" }));
       } catch (cause) {
         if (!controller.signal.aborted) setListError(cause instanceof LlmError ? cause : new LlmError("api"));
       } finally {
@@ -132,7 +125,7 @@ function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSe
             baseUrl: settings.baseUrl.trim(),
             model: settings.model.trim(),
             apiKey: settings.apiKey.trim(),
-            fallbackModels: fallbacks,
+            fallbackModels: models.length ? fallbacks : settings.fallbackModels,
           };
           saveLlmSettings(value);
           onSave(value);
@@ -171,7 +164,9 @@ function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSe
                   const name = e.target.value as keyof typeof presets | "custom";
                   setPreset(name);
                   setError(undefined);
-                  if (name !== "custom") setSettings({ ...settings, baseUrl: presets[name] });
+                  // Outro provedor, outros modelos: limpa para a lista sugerir o recomendado.
+                  if (name !== "custom")
+                    setSettings({ ...settings, baseUrl: presets[name], model: "", fallbackModels: [] });
                 }}
               >
                 {(Object.keys(presets) as (keyof typeof presets)[]).map((name) => (
@@ -206,7 +201,7 @@ function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSe
         )}
         <label className="block">
           {t("llm.model")}
-          {models.length > 0 && !manualModel ? (
+          {models.length > 0 && !manualModel && (!settings.model || models.includes(settings.model)) ? (
             <select
               className="rounded-lg border border-line bg-bg p-3 text-ink min-h-10 w-full"
               value={settings.model}
@@ -373,12 +368,27 @@ export function useLlmTask() {
   function run(task: (callLlm: CallLlm) => Promise<void>) {
     if (locked.current || dialog) return;
     lastTask.current = task;
-    const settings = settingsRef.current ?? loadLlmSettings();
+    const settings = loadLlmSettings() ?? settingsRef.current;
     if (settings) void execute(settings, task);
     else setDialog("generate");
   }
+  const modelNotice = modelStatus && (
+    <p role="status" className="text-sm text-muted">
+      {t("generation.modelStatus", {
+        used: modelStatus.used,
+        skipped: modelStatus.skipped
+          .map(({ model, code }) =>
+            t(code === "overloaded" ? "generation.skippedOverloaded" : "generation.skippedUnavailable", {
+              model,
+            }),
+          )
+          .join(", "),
+      })}
+    </p>
+  );
   return {
     busy,
+    modelNotice,
     run,
     error,
     setError,
@@ -413,21 +423,7 @@ export function useLlmTask() {
             </button>
           </div>
         )}
-        {modelStatus && (
-          <p role="status" className="text-sm text-muted">
-            {t("generation.modelStatus", {
-              used: modelStatus.used,
-              skipped: modelStatus.skipped
-                .map(({ model, code }) =>
-                  t(
-                    code === "overloaded" ? "generation.skippedOverloaded" : "generation.skippedUnavailable",
-                    { model },
-                  ),
-                )
-                .join(", "),
-            })}
-          </p>
-        )}
+        {modelNotice}
         {dialog && (
           <LlmDialog
             onClose={() => {

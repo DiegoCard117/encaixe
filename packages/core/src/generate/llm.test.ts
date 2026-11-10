@@ -60,6 +60,15 @@ describe("parseResumeDraft", () => {
     expect(parseResumeDraft(JSON.stringify(draft))).toEqual({ ok: true, draft });
   });
 
+  it("ignora chaves no texto antes do JSON", () => {
+    expect(parseResumeDraft(`Use {nome} no texto. ${JSON.stringify(draft)}`)).toEqual({ ok: true, draft });
+    expect(parseResumeDraft(`${"{nome} ".repeat(20)}${JSON.stringify(draft)}`)).toEqual({
+      ok: false,
+      error: "invalid_json",
+      issues: [],
+    });
+  });
+
   it.each(["json", ""])("aceita cerca de código %s", (language) => {
     expect(parseResumeDraft(`\n\`\`\`${language}\n${JSON.stringify(draft)}\n\`\`\`\n`)).toEqual({
       ok: true,

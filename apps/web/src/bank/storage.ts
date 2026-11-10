@@ -24,8 +24,18 @@ export function loadBank(): StoredBank {
 export function saveBank(bank: FactBank): boolean {
   try {
     localStorage.setItem("encaixe.bank", JSON.stringify(bank));
+    localStorage.setItem("encaixe.bankSavedAt", new Date().toISOString());
     return true;
   } catch {
     return false;
+  }
+}
+
+export function loadBankSavedAt(): string | undefined {
+  try {
+    const value = localStorage.getItem("encaixe.bankSavedAt");
+    if (value && Number.isFinite(Date.parse(value))) return value;
+  } catch {
+    /* Storage may be unavailable. */
   }
 }

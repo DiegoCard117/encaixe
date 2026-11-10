@@ -52,6 +52,8 @@ O banco de fatos fica no navegador, em `localStorage`. Não há conta, servidor 
 
 O texto da vaga, o texto do currículo antigo e os fatos usados nas chamadas vão diretamente ao provedor de LLM escolhido. Confira os termos desse provedor antes de enviar seus dados. Com Ollama local, o destino é sua própria máquina.
 
+Na importação de currículo, a revisão em andamento (incluindo o texto do currículo) fica salva neste navegador até você adicionar ao banco ou tocar em **Descartar revisão**.
+
 Se você ligar a sincronização com o Supabase (opcional), o banco também vai para o **seu** projeto Supabase, protegido por login e RLS; o Encaixe não tem acesso. Veja [docs/supabase.md](docs/supabase.md).
 
 Para apagar tudo deste navegador, use **Apagar tudo deste navegador** em **Configurações** › Zona de perigo, no banco de fatos (com opção de apagar também o banco no Supabase).

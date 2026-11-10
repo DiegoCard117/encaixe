@@ -269,6 +269,12 @@ export function createCallLlm(
   onModel?: (used: string, skipped: { model: string; code: LlmErrorCode }[]) => void,
 ): CallLlm {
   return async (messages) => {
+    const timeout = AbortSignal.timeout(300_000);
+    const combinedSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
+    const checkAbort = () => {
+      if (signal?.aborted) throw new LlmError("canceled");
+      if (timeout.aborted) throw new LlmError("timeout");
+    };
     const skipped: { model: string; code: LlmErrorCode }[] = [];
     let firstError: LlmError | undefined;
     const queue = [...new Set([settings.model, ...(settings.fallbackModels ?? [])])];
@@ -278,7 +284,7 @@ export function createCallLlm(
       const model = queue[i]!;
       let result: string;
       try {
-        result = await createModelCall({ ...settings, model }, signal)(messages);
+        result = await createModelCall({ ...settings, model }, combinedSignal, checkAbort)(messages);
       } catch (error) {
         if (!(error instanceof LlmError) || (error.code !== "model" && error.code !== "overloaded"))
           throw error;
@@ -288,7 +294,7 @@ export function createCallLlm(
           discovered = true;
           try {
             const ranked = rankModels(
-              await listModels(settings, signal),
+              await listModels(settings, combinedSignal),
               settings.provider,
               settings.baseUrl,
             );
@@ -298,6 +304,7 @@ export function createCallLlm(
           } catch {
             /* Sem lista de modelos: fica o erro original. */
           }
+          checkAbort();
         }
         continue;
       }
@@ -308,14 +315,8 @@ export function createCallLlm(
   };
 }
 
-function createModelCall(s: LlmSettings, signal?: AbortSignal): CallLlm {
+function createModelCall(s: LlmSettings, combinedSignal: AbortSignal, checkAbort: () => void): CallLlm {
   return async (messages) => {
-    const timeout = AbortSignal.timeout(300_000);
-    const combinedSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
-    const checkAbort = () => {
-      if (signal?.aborted) throw new LlmError("canceled");
-      if (timeout.aborted) throw new LlmError("timeout");
-    };
     checkAbort();
     if (s.provider === "anthropic") {
       // SDK carregado só quando usado: quem usa uma API compatível nunca baixa.
@@ -329,9 +330,12 @@ function createModelCall(s: LlmSettings, signal?: AbortSignal): CallLlm {
       try {
         checkAbort();
         const client = new Anthropic({ apiKey: s.apiKey, dangerouslyAllowBrowser: true, maxRetries: 0 });
-        const res = await client.messages.create(
+        const res = await client.beta.messages.create(
           {
             model: s.model,
+            ...(/^claude-(opus|sonnet)-5-5(?:-|$)/.test(s.model)
+              ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
+              : {}),
             max_tokens: 16000,
             system: messages.system,
             messages: [{ role: "user", content: messages.user }],

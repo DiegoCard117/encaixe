@@ -551,6 +551,29 @@ export default function ImportResume({
                 total: facts.length + (bank ? 0 : 1),
               })}
             </p>
+            {llm.modelNotice}
+            <p className="mt-1 text-xs text-muted">{t("import.savedReview")}</p>
+            <button
+              type="button"
+              className="min-h-10 text-sm text-muted underline"
+              onClick={() => {
+                if (!window.confirm(t("import.discardReview"))) return;
+                clearReview();
+                setExtraction(undefined);
+                setText("");
+                setSourceText("");
+                setStatuses({});
+                setProfileStatus("pending");
+                setDropped(0);
+                setHasEdits(false);
+                setExpandedDecided({});
+                setEditing(undefined);
+                setErrors([]);
+                llm.setError(undefined);
+              }}
+            >
+              {t("import.discardSavedReview")}
+            </button>
             {dropped > 0 && (
               <p role="status" className="mt-1 text-xs text-warn-ink">
                 {t("import.dropped", { count: dropped })}

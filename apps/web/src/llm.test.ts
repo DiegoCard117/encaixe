@@ -22,7 +22,11 @@ const success = () => Response.json({ choices: [{ message: { content: "{}" } }] 
 const failure = (status: number, message: string, array = false) =>
   Response.json(array ? [{ error: { message } }] : { error: { message } }, { status });
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
 
 describe("listModels", () => {
   it("normalizes, deduplicates and filters non-text model IDs", async () => {
@@ -130,6 +134,62 @@ describe("rankModels", () => {
 });
 
 describe("createCallLlm", () => {
+  it("shares a single five-minute timeout across fallback attempts", async () => {
+    vi.useFakeTimers();
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockImplementation((ms) => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), ms);
+      return controller.signal;
+    });
+    const signals: AbortSignal[] = [];
+    const fetch = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((resolve, reject) => {
+          const signal = init.signal!;
+          signals.push(signal);
+          const timer = setTimeout(() => resolve(failure(503, "Busy")), 240_000);
+          signal.addEventListener(
+            "abort",
+            () => {
+              clearTimeout(timer);
+              reject(signal.reason);
+            },
+            { once: true },
+          );
+        }),
+    );
+    vi.stubGlobal("fetch", fetch);
+    const result = expect(createCallLlm(settings)(messages)).rejects.toMatchObject({ code: "timeout" });
+    await vi.advanceTimersByTimeAsync(240_000);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(signals[0]).toBe(signals[1]);
+    await vi.advanceTimersByTimeAsync(60_000);
+    await result;
+    expect(timeout).toHaveBeenCalledExactlyOnceWith(300_000);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(["claude-opus-5-5", "claude-sonnet-5-5-20260701", "claude-haiku-5-5", "claude-opus-5-50"])(
+    "requests Anthropic server fallback only for supported models: %s",
+    async (model) => {
+      const fetch = vi.fn().mockResolvedValue(
+        Response.json({
+          content: [{ type: "text", text: "{}" }],
+          stop_reason: "end_turn",
+        }),
+      );
+      vi.stubGlobal("fetch", fetch);
+      await expect(createCallLlm({ ...settings, provider: "anthropic", model })(messages)).resolves.toBe(
+        "{}",
+      );
+      const init = fetch.mock.calls[0]![1] as RequestInit;
+      const supported = /^claude-(opus|sonnet)-5-5(?:-|$)/.test(model);
+      expect(JSON.parse(String(init.body)).fallbacks).toBe(supported ? "default" : undefined);
+      expect(
+        new Headers(init.headers).get("anthropic-beta")?.includes("server-side-fallback-2026-07-01") ?? false,
+      ).toBe(supported);
+    },
+  );
   it.each([false, true])("maps OpenAI/Gemini error bodies (array: %s)", async (array) => {
     for (const [status, message, code] of [
       [404, "Model no longer available to new users", "model"],

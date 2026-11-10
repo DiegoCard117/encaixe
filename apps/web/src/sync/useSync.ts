@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FactBankSchema, type FactBank } from "@encaixe/core";
-import { loadBank, saveBank } from "../bank/storage";
+import { loadBank, loadBankSavedAt, saveBank } from "../bank/storage";
 import { decideSync, type Remote } from "./decide";
 import {
   clearLastSync,
@@ -17,6 +17,7 @@ import {
   signOut,
   SyncError,
   syncError,
+  verifyCode,
   type SyncConfig,
   type SyncErrorCode,
 } from "./supabase";
@@ -38,7 +39,6 @@ export function useSync(onPulled: (bank: FactBank) => void) {
   const pending = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const session = useRef<string | undefined>(undefined);
-  const localSavedAt = useRef<string | undefined>(undefined);
   const conflict = useRef<{ localJson: string | undefined; remote: Remote } | undefined>(undefined);
   const runRef = useRef<() => Promise<void>>(async () => {});
 
@@ -89,7 +89,7 @@ export function useSync(onPulled: (bank: FactBank) => void) {
         conflict.current = { localJson, remote };
         setState({
           status: "conflict",
-          local: { count: local?.facts.length ?? 0, date: localSavedAt.current },
+          local: { count: local?.facts.length ?? 0, date: loadBankSavedAt() },
           remote: { count: remoteBank?.success ? remoteBank.data.facts.length : 0, date: remote?.updatedAt },
         });
         return;
@@ -100,7 +100,6 @@ export function useSync(onPulled: (bank: FactBank) => void) {
       if (!active.current) return;
       if (decision === "pull" && remoteBank?.success) {
         if (!saveBank(remoteBank.data)) throw new SyncError("storage");
-        localSavedAt.current = new Date().toISOString();
         callback.current(remoteBank.data);
       }
       const bankJson = decision === "pull" ? remote?.bankJson : localJson;
@@ -124,15 +123,25 @@ export function useSync(onPulled: (bank: FactBank) => void) {
     let disposed = false;
     let unsubscribe: (() => void) | undefined;
     if (config) {
-      void sync();
+      const authDescription = new URL(location.href).searchParams.get("error_description");
       void getClient(config)
-        .then((client) => {
+        .then(async (client) => {
+          const { error } = await client.auth.getSession();
           if (disposed) return;
+          const url = new URL(location.href);
+          const authParams = ["code", "error", "error_code", "error_description"];
+          if (authParams.some((name) => url.searchParams.has(name))) {
+            for (const name of authParams) url.searchParams.delete(name);
+            history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+          }
+          if (authDescription !== null) setState({ status: "error", code: "auth" });
+          else if (error) throw error;
+          else void sync();
           const { data } = client.auth.onAuthStateChange((event, nextSession) => {
             if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
               session.current = nextSession?.user.email;
               queueMicrotask(() => {
-                if (!disposed) void runRef.current();
+                if (!disposed && authDescription === null) void runRef.current();
               });
             }
           });
@@ -151,7 +160,6 @@ export function useSync(onPulled: (bank: FactBank) => void) {
   }, [config, sync]);
 
   function afterLocalSave(_bank: FactBank) {
-    localSavedAt.current = new Date().toISOString();
     if (!session.current) return;
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
@@ -204,6 +212,16 @@ export function useSync(onPulled: (bank: FactBank) => void) {
     async sendLink(email: string): Promise<boolean> {
       try {
         await sendMagicLink(email);
+        return true;
+      } catch (error) {
+        setState({ status: "error", code: syncError(error).code });
+        return false;
+      }
+    },
+    async verifyCode(email: string, token: string): Promise<boolean> {
+      try {
+        await verifyCode(email, token);
+        await sync();
         return true;
       } catch (error) {
         setState({ status: "error", code: syncError(error).code });

@@ -53,15 +53,19 @@ export type ParseResult =
 /**
  * Lê o JSON da resposta da LLM. Tolera o que modelos costumam fazer: cerca ```json e
  * texto antes ou depois ("Aqui está o JSON:"). Tenta, em ordem: o texto inteiro, o
- * conteúdo da primeira cerca e o trecho do primeiro "{" ao último "}".
+ * conteúdo da primeira cerca e trechos das primeiras 20 "{" até a última "}".
  */
 export function parseJsonResponse(raw: string): { ok: true; value: unknown } | { ok: false } {
   const trimmed = raw.trim();
   const fenced = /```(?:json)?\s*\n?([\s\S]*?)\s*```/i.exec(trimmed)?.[1];
-  const start = trimmed.indexOf("{");
   const end = trimmed.lastIndexOf("}");
-  const braces = start >= 0 && end > start ? trimmed.slice(start, end + 1) : undefined;
-  for (const candidate of [trimmed, fenced, braces]) {
+  const candidates = [trimmed, fenced];
+  let start = trimmed.indexOf("{");
+  for (let count = 0; count < 20 && start >= 0 && start < end; count++) {
+    candidates.push(trimmed.slice(start, end + 1));
+    start = trimmed.indexOf("{", start + 1);
+  }
+  for (const candidate of candidates) {
     if (candidate === undefined) continue;
     try {
       return { ok: true, value: JSON.parse(candidate) };

@@ -13,11 +13,13 @@ import {
   saveSyncConfig,
   syncError,
   validateConfig,
+  verifyCode,
 } from "./supabase";
 
 const mock = vi.hoisted(() => ({
   createClient: vi.fn(),
   getUser: vi.fn(),
+  verifyOtp: vi.fn(),
   maybeSingle: vi.fn(),
   single: vi.fn(),
   from: vi.fn(),
@@ -45,7 +47,10 @@ beforeEach(() => {
   mock.select.mockReturnValue({ eq: mock.eq, single: mock.single });
   mock.eq.mockReturnValue({ maybeSingle: mock.maybeSingle });
   mock.upsert.mockReturnValue({ select: mock.select });
-  mock.createClient.mockReturnValue({ auth: { getUser: mock.getUser }, from: mock.from });
+  mock.createClient.mockReturnValue({
+    auth: { getUser: mock.getUser, verifyOtp: mock.verifyOtp },
+    from: mock.from,
+  });
 });
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -121,6 +126,15 @@ describe("public project configuration", () => {
 describe("remote boundary", () => {
   beforeEach(() => {
     saveSyncConfig(config);
+  });
+  it("verifies the email code and maps authentication and network errors", async () => {
+    mock.verifyOtp.mockResolvedValue({ error: null });
+    await verifyCode("ana@example.com", "123456");
+    expect(mock.verifyOtp).toHaveBeenCalledWith({ email: "ana@example.com", token: "123456", type: "email" });
+    mock.verifyOtp.mockResolvedValue({ error: { name: "AuthApiError", status: 403 } });
+    await expect(verifyCode("ana@example.com", "000000")).rejects.toMatchObject({ code: "auth" });
+    mock.verifyOtp.mockRejectedValue(new TypeError("Failed to fetch"));
+    await expect(verifyCode("ana@example.com", "123456")).rejects.toMatchObject({ code: "network" });
   });
   it("scopes queries to the signed-in user and validates remote banks", async () => {
     mock.maybeSingle.mockResolvedValue({

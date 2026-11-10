@@ -11,6 +11,7 @@ export default function SyncCard({ sync }: { sync: ReturnType<typeof useSync> })
   const [key, setKey] = useState("");
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState<string>();
+  const [token, setToken] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<ConfigError>();
   const { state } = sync;
@@ -30,42 +31,76 @@ export default function SyncCard({ sync }: { sync: ReturnType<typeof useSync> })
           </button>
         </>
       )}
-      {state.status === "signed_out" && (
-        <form
-          className="space-y-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (sending) return;
-            const address = email.trim();
-            setSending(true);
-            void sync
-              .sendLink(address)
-              .then((ok) => {
-                if (ok) setSent(address);
-              })
-              .finally(() => setSending(false));
-          }}
-        >
-          <label className="block">
-            {t("field.email")}
-            <input
-              className={inputClass}
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </label>
-          <button type="submit" className="bank-button" disabled={sending}>
-            {t("sync.sendLink")}
-          </button>
+      {(state.status === "signed_out" || (state.status === "error" && !!sent)) && (
+        <>
+          <form
+            className="space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (sending) return;
+              const address = email.trim();
+              setSending(true);
+              void sync
+                .sendLink(address)
+                .then((ok) => {
+                  if (ok) {
+                    setSent(address);
+                    setToken("");
+                  }
+                })
+                .finally(() => setSending(false));
+            }}
+          >
+            <label className="block">
+              {t("field.email")}
+              <input
+                className={inputClass}
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </label>
+            <button type="submit" className="bank-button" disabled={sending}>
+              {t("sync.sendLink")}
+            </button>
+            {sent && (
+              <p role="status" className="text-sm">
+                {t("sync.sent", { email: sent })}
+              </p>
+            )}
+          </form>
           {sent && (
-            <p role="status" className="text-sm">
-              {t("sync.sent", { email: sent })}
-            </p>
+            <form
+              className="space-y-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (sending || !/^\d{6}$/.test(token)) return;
+                setSending(true);
+                void sync.verifyCode(sent, token).finally(() => setSending(false));
+              }}
+            >
+              <p className="text-sm text-muted">{t("sync.codeHelp")}</p>
+              <label className="block">
+                {t("sync.emailCode")}
+                <input
+                  className={inputClass}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  required
+                  value={token}
+                  onChange={(event) => setToken(event.target.value)}
+                />
+              </label>
+              <button type="submit" className="bank-button" disabled={sending}>
+                {t("sync.verifyCode")}
+              </button>
+            </form>
           )}
-        </form>
+        </>
       )}
       {state.status === "idle" && (
         <>

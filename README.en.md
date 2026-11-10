@@ -52,6 +52,8 @@ Your fact bank stays in the browser's `localStorage`. There is no account, proje
 
 The job description, old resume text and facts used in LLM requests go directly to your chosen provider. Check that provider's terms before sending your data. With local Ollama, the destination is your own machine.
 
+When importing a resume, the review in progress (including the resume text) stays in this browser until you add it to the bank or tap **Discard review**.
+
 If you turn on Supabase sync (optional), the bank also goes to **your own** Supabase project, protected by sign-in and RLS; Encaixe has no access to it. See [docs/supabase.md](docs/supabase.md).
 
 To wipe everything from this browser, use **Delete everything from this browser** under **Settings** › Danger zone in the fact bank (optionally also deleting your bank in Supabase).
