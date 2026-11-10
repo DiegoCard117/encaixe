@@ -11,7 +11,7 @@ Mudou de ideia? Edite a linha e diga o motivo no commit.
 
 - **Core puro.** `packages/core` não tem UI, disco, rede nem DOM. Web e CLI são cascas finas sobre ele.
 - **LLM com a chave do usuário, direto do navegador.** Sem backend nosso: custo zero e nenhum dado passa por servidor do projeto.
-- **Um provedor de LLM no MVP.** O core recebe a função de chamada, então novos provedores entram sem mexer na lógica.
+- **O usuário escolhe o provedor de LLM: Anthropic ou OpenAI.** Chamada direta do navegador: Anthropic pelo SDK oficial (`@anthropic-ai/sdk` com `dangerouslyAllowBrowser`, modelo padrão Claude Opus 5.5 e fallback do servidor em caso de recusa), OpenAI por `fetch`. O core recebe a função de chamada, então novos provedores entram sem mexer na lógica.
 - **Chave da API só na sessão por padrão**, com opção explícita de lembrar neste navegador.
 - **Aderência fato × vaga determinística** (termos, skills e tags), sem embeddings: explicável, offline e testável.
 - **Sem telemetria.**
@@ -19,7 +19,7 @@ Mudou de ideia? Edite a linha e diga o motivo no commit.
 ## Persistência
 
 - **Local por padrão, sem conta e sem servidor:** o banco de fatos fica no navegador (localStorage) e pode ser exportado/importado em JSON.
-- **Banco de dados opcional.** Quem quiser pode ligar um banco para persistir e sincronizar entre dispositivos. O app nunca exige isso: tudo funciona sem banco.
+- **Banco de dados opcional, no Supabase.** Quem quiser pode ligar um banco para persistir e sincronizar entre dispositivos (cada pessoa liga o próprio projeto Supabase; o Encaixe não mantém servidor). O app nunca exige isso: tudo funciona sem banco.
 - O formato persistido é sempre o `FactBank` validado pelo `FactBankSchema`, seja no navegador, no JSON ou no banco.
 
 ## Interface
@@ -66,8 +66,3 @@ Abrir o app → montar o banco de fatos → colar a vaga → ver a aderência �
 - **Chave da LLM pedida só na primeira geração**, não no onboarding.
 - **PDF só sai com zero violações.** Para destravar: editar, remover o bullet ou regenerar.
 - Fora do MVP: histórico de candidaturas e múltiplos modelos de currículo.
-
-## Em aberto
-
-- Qual banco/serviço usar na persistência opcional.
-- Provedor de LLM do MVP.

@@ -6,6 +6,44 @@ import { VALIDATION_CODES, type ValidationCode } from "../../../packages/core/sr
 export type Locale = "pt-BR" | "en";
 
 const ptBR = {
+  "job.text": "Descrição da vaga",
+  "job.fit": "Aderência à vaga",
+  "job.count": "{count} de {total} tecnologias da vaga estão no seu banco",
+  "job.factsCount": "em {count} fatos",
+  "job.gaps": "Lacunas",
+  "job.addFact": "Tenho: cadastrar fato",
+  "job.dismiss": "Não tenho",
+  "job.relevant": "Fatos mais relevantes",
+  "job.generate": "Gerar currículo",
+  "llm.title": "Configuração de LLM",
+  "llm.configure": "Configurar LLM",
+  "llm.provider": "Provedor",
+  "llm.anthropic": "Anthropic",
+  "llm.openai": "OpenAI",
+  "llm.model": "Modelo",
+  "llm.key": "Chave da API",
+  "llm.remember": "Lembrar neste navegador",
+  "llm.clear": "Apagar chave salva",
+  "llm.privacy":
+    "A chave vai direto do seu navegador para o provedor. O Encaixe não tem servidor. Por padrão, ela some quando a aba fecha.",
+  "generation.busy": "Gerando currículo…",
+  "generation.retry": "Tentar de novo",
+  "generation.auth": "Chave inválida ou sem permissão. Confira a configuração de LLM.",
+  "generation.rate_limit": "Limite do provedor atingido. Aguarde e tente de novo.",
+  "generation.refused": "O provedor recusou a geração. Tente de novo.",
+  "generation.truncated": "A resposta foi interrompida antes de terminar. Tente de novo.",
+  "generation.network": "Não foi possível conectar ao provedor. Confira sua conexão.",
+  "generation.api": "O provedor retornou um erro. Tente de novo.",
+  "generation.invalid_json": "O provedor retornou JSON inválido. Tente de novo.",
+  "generation.invalid_schema": "A resposta não segue o formato de currículo. Tente de novo.",
+  "generation.storage":
+    "Não foi possível salvar neste navegador. Libere espaço ou permita o armazenamento e tente de novo.",
+  "review.regenerate": "Gerar de novo",
+  "review.pdf": "Exportar PDF",
+  "review.pdfBlocked": "Disponível com zero invenções",
+  "review.missing": "Nenhum rascunho válido foi encontrado. Gere um currículo a partir da vaga.",
+  "review.bullet": "Bullet {count} · {id}",
+  "review.present": "atual",
   "editor.steps": "Etapas do currículo",
   "editor.step1": "1 Banco de fatos",
   "editor.step2": "2 Vaga e aderência",
@@ -165,6 +203,43 @@ const ptBR = {
 };
 
 const en: Record<keyof typeof ptBR, string> = {
+  "job.text": "Job description",
+  "job.fit": "Job fit",
+  "job.count": "{count} of {total} job technologies are in your bank",
+  "job.factsCount": "in {count} facts",
+  "job.gaps": "Gaps",
+  "job.addFact": "I have it: add a fact",
+  "job.dismiss": "I do not have it",
+  "job.relevant": "Most relevant facts",
+  "job.generate": "Generate resume",
+  "llm.title": "LLM settings",
+  "llm.configure": "Configure LLM",
+  "llm.provider": "Provider",
+  "llm.anthropic": "Anthropic",
+  "llm.openai": "OpenAI",
+  "llm.model": "Model",
+  "llm.key": "API key",
+  "llm.remember": "Remember in this browser",
+  "llm.clear": "Delete saved key",
+  "llm.privacy":
+    "The key goes directly from your browser to the provider. Encaixe has no server. By default, it disappears when the tab closes.",
+  "generation.busy": "Generating resume…",
+  "generation.retry": "Try again",
+  "generation.auth": "Invalid or unauthorized key. Check your LLM settings.",
+  "generation.rate_limit": "Provider limit reached. Wait and try again.",
+  "generation.refused": "The provider refused the generation. Try again.",
+  "generation.truncated": "The response ended before completion. Try again.",
+  "generation.network": "Could not connect to the provider. Check your connection.",
+  "generation.api": "The provider returned an error. Try again.",
+  "generation.invalid_json": "The provider returned invalid JSON. Try again.",
+  "generation.invalid_schema": "The response does not follow the resume format. Try again.",
+  "generation.storage": "Could not save in this browser. Free up space or allow storage and try again.",
+  "review.regenerate": "Generate again",
+  "review.pdf": "Export PDF",
+  "review.pdfBlocked": "Available with zero inventions",
+  "review.missing": "No valid draft found. Generate a resume from the job posting.",
+  "review.bullet": "Bullet {count} · {id}",
+  "review.present": "present",
   "editor.steps": "Resume steps",
   "editor.step1": "1 Fact bank",
   "editor.step2": "2 Job and match",
@@ -430,4 +505,8 @@ export function useI18n(): I18n {
   const context = useContext(LocaleContext);
   if (!context) throw new Error("useI18n requires LocaleProvider");
   return context;
+}
+
+export function resumePresent(locale: Locale): string {
+  return (locale === "pt-BR" ? ptBR : en)["review.present"];
 }

@@ -1,12 +1,7 @@
 import { useState } from "react";
-import {
-  checkResumeDraft,
-  FactBankSchema,
-  ResumeDraftSchema,
-  type ResumeDraft,
-  type Violation,
-} from "@encaixe/core";
+import { checkResumeDraft, FactBankSchema, ResumeDraftSchema, type ResumeDraft } from "@encaixe/core";
 import { sampleBank } from "@encaixe/core/fixtures";
+import { highlight } from "./highlight";
 import { useI18n } from "./i18n";
 
 const bank = FactBankSchema.parse(sampleBank);
@@ -47,25 +42,6 @@ function formatPath(path: PropertyKey[]): string {
       typeof part === "number" ? `${result}[${part}]` : `${result ? `${result}.` : ""}${String(part)}`,
     "",
   );
-}
-
-function highlight(text: string, violations: Violation[]) {
-  const values = [
-    ...new Set(
-      violations
-        .filter(({ code }) => code === "unsupported_skill" || code === "unsupported_number")
-        .map(({ value }) => value),
-    ),
-  ].filter(Boolean);
-  if (!values.length) return text;
-  const pattern = new RegExp(
-    `(?<![\\p{L}\\p{N}])(${values
-      .sort((a, b) => b.length - a.length)
-      .map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-      .join("|")})(?![\\p{L}\\p{N}])`,
-    "giu",
-  );
-  return text.split(pattern).map((part, index) => (index % 2 ? <mark key={index}>{part}</mark> : part));
 }
 
 export default function Playground() {

@@ -3,12 +3,18 @@ import { useI18n } from "./i18n";
 import { applyTheme, readTheme, setTheme, type ThemePref } from "./theme";
 import Playground from "./Playground";
 import BankEditor from "./bank/BankEditor";
+import { loadBank } from "./bank/storage";
+import JobStep from "./job/JobStep";
+import ReviewStep from "./review/ReviewStep";
 
 export default function App() {
   const { locale, setLocale, t } = useI18n();
   const [theme, setThemePref] = useState<ThemePref>(readTheme);
   const [hash, setHash] = useState(() => location.hash);
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState(() => loadBank().status === "ok");
+  const stored = loadBank();
+  const bank = stored.status === "ok" ? stored.bank : undefined;
+  const stepRoute = hash === "#/vaga" || hash === "#/revisao";
   useEffect(() => applyTheme(theme), [theme]);
   useEffect(() => {
     const update = () => setHash(location.hash);
@@ -21,7 +27,7 @@ export default function App() {
     setThemePref(next);
   }
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-8 sm:py-12">
+    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-8 sm:py-12 [&_:focus-visible]:outline-2 [&_:focus-visible]:outline-offset-2 [&_:focus-visible]:outline-accent">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-line pb-6">
         <div>
           <div className="flex items-center gap-3">
@@ -56,24 +62,36 @@ export default function App() {
         <a
           className="bank-button bg-accent-soft text-accent-ink"
           href="#/"
-          aria-current={hash !== "#/playground" ? "step" : undefined}
+          aria-current={!stepRoute && hash !== "#/playground" ? "step" : undefined}
         >
           {t("editor.step1")}
         </a>
-        <span className="bank-button text-muted" aria-disabled="true">
-          {t("editor.step2")} · {t("editor.soon")}
-        </span>
-        <span className="bank-button text-muted" aria-disabled="true">
-          {t("editor.step3")} · {t("editor.soon")}
-        </span>
+        {(["#/vaga", "#/revisao"] as const).map((route, index) =>
+          bank ? (
+            <a
+              key={route}
+              className={`bank-button min-h-10 ${hash === route ? "bg-accent-soft text-accent-ink" : "text-muted"}`}
+              href={route}
+              aria-current={hash === route ? "step" : undefined}
+            >
+              {t(index === 0 ? "editor.step2" : "editor.step3")}
+            </a>
+          ) : (
+            <span key={route} className="bank-button min-h-10 text-muted" aria-disabled="true">
+              {t(index === 0 ? "editor.step2" : "editor.step3")}
+            </span>
+          ),
+        )}
         <span role="status" className="text-sm text-muted sm:ml-auto">
           {t(saved ? "editor.saved" : "editor.notSaved")}
         </span>
       </nav>
-      <div hidden={hash === "#/playground"}>
+      <div hidden={hash === "#/playground" || (stepRoute && !!bank)}>
         <BankEditor onSaved={setSaved} />
       </div>
       {hash === "#/playground" && <Playground />}
+      {hash === "#/vaga" && bank && <JobStep bank={bank} />}
+      {hash === "#/revisao" && bank && <ReviewStep bank={bank} />}
     </main>
   );
 }
