@@ -1,10 +1,14 @@
 import { useMemo, useState } from "react";
-import { analyzeFit, type FactBank } from "@encaixe/core";
+import { analyzeFit, FactBankSchema, type FactBank } from "@encaixe/core";
 import { useI18n, type Locale } from "../i18n";
 import { useGeneration } from "../generation";
+import InterviewPanel from "../bank/InterviewPanel";
+import { loadBank, saveBank } from "../bank/storage";
+import { describePath } from "../paths";
 
-export default function JobStep({ bank }: { bank: FactBank }) {
-  const { t, locale: uiLocale } = useI18n();
+export default function JobStep({ bank, onBankChange }: { bank: FactBank; onBankChange: () => void }) {
+  const { t, tIssue, locale: uiLocale } = useI18n();
+  const [interview, setInterview] = useState<string>();
   const [jobText, setJobText] = useState(() => {
     try {
       return localStorage.getItem("encaixe.job") ?? "";
@@ -106,7 +110,7 @@ export default function JobStep({ bank }: { bank: FactBank }) {
                 .map((gap) => (
                   <li key={gap} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
                     <span className="min-w-0 break-words font-medium">{gap}</span>
-                    <span className="flex gap-2">
+                    <span className="flex flex-wrap gap-2">
                       <a
                         className="bank-button min-h-10"
                         href="#/"
@@ -121,6 +125,14 @@ export default function JobStep({ bank }: { bank: FactBank }) {
                         onClick={() => setDismissed([...dismissed, gap])}
                       >
                         {t("job.dismiss")}
+                      </button>
+                      <button
+                        type="button"
+                        className="bank-button min-h-10"
+                        aria-label={t("interview.gapTitle", { term: gap })}
+                        onClick={() => setInterview(gap)}
+                      >
+                        {t("interview.talk")}
                       </button>
                     </span>
                   </li>
@@ -153,6 +165,32 @@ export default function JobStep({ bank }: { bank: FactBank }) {
           </section>
         </div>
       </div>
+      {interview !== undefined && (
+        <InterviewPanel
+          bank={bank}
+          topic={{ kind: "gap", term: interview }}
+          onClose={() => setInterview(undefined)}
+          onAddFacts={(facts) => {
+            const stored = loadBank();
+            if (stored.status !== "ok") return [t("editor.invalid")];
+            const candidate = {
+              ...stored.bank,
+              facts: [
+                ...stored.bank.facts,
+                ...facts.filter((fact) => !stored.bank.facts.some((saved) => saved.id === fact.id)),
+              ],
+            };
+            const result = FactBankSchema.safeParse(candidate);
+            if (!result.success)
+              return result.error.issues.map(
+                (issue) => `${describePath(issue.path, t, candidate)}: ${tIssue(issue)}`,
+              );
+            if (!saveBank(result.data)) return [t("editor.storageError")];
+            onBankChange();
+            return [];
+          }}
+        />
+      )}
     </section>
   );
 }

@@ -51,7 +51,7 @@ export function saveDraft(value: SavedDraft): boolean {
   }
 }
 
-function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSettings) => void }) {
+export function LlmDialog({ onClose, onSave }: { onClose: () => void; onSave: (s: LlmSettings) => void }) {
   const { t } = useI18n();
   const [settings, setSettings] = useState<LlmSettings>(
     () =>

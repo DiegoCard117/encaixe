@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { FactBankSchema, createEmptyFactBank, removeFact, type Fact, type FactKind } from "@encaixe/core";
+import {
+  FactBankSchema,
+  createEmptyFactBank,
+  removeFact,
+  type Fact,
+  type FactKind,
+  type InterviewTopic,
+} from "@encaixe/core";
 import { sampleBank } from "@encaixe/core/fixtures";
 import { useI18n } from "../i18n";
 import { describePath } from "../paths";
@@ -11,6 +18,9 @@ import ImportResume from "./ImportResume";
 import { useSync } from "../sync/useSync";
 import SyncCard from "../sync/SyncCard";
 import DangerZone from "./DangerZone";
+import InterviewPanel from "./InterviewPanel";
+import { LlmDialog } from "../generation";
+import { loadLlmSettings, presets } from "../llm";
 
 type Editing = { kind: "profile" } | { kind: FactKind; fact?: Fact; contextId?: string };
 export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => void }) {
@@ -20,6 +30,15 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
   const [editing, setEditing] = useState<Editing>();
   const [importingResume, setImportingResume] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [llmOpen, setLlmOpen] = useState(false);
+  const [llmSettings, setLlmSettings] = useState(loadLlmSettings);
+  const llmPreset =
+    llmSettings?.provider === "openai-compatible"
+      ? (Object.keys(presets) as (keyof typeof presets)[]).find(
+          (name) => presets[name] === llmSettings.baseUrl,
+        )
+      : undefined;
+  const [interview, setInterview] = useState<InterviewTopic>();
   useEffect(() => {
     try {
       if (sessionStorage.getItem("encaixe.openSettings") === "1") {
@@ -51,9 +70,13 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
         (issue) => `${describePath(issue.path, t, candidate)}: ${tIssue(issue)}`,
       );
     const saved = saveBank(result.data);
-    if (saved) sync.afterLocalSave(result.data);
+    if (!saved) {
+      setSaveFailed(true);
+      return [t("editor.storageError")];
+    }
+    sync.afterLocalSave(result.data);
     setStored({ status: "ok", bank: result.data });
-    setSaveFailed(!saved);
+    setSaveFailed(false);
     setErrors([]);
     return [];
   }
@@ -158,14 +181,24 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
             {t("editor.edit")}
           </button>
           {fact.kind !== "skill" && fact.kind !== "achievement" && (
-            <button
-              type="button"
-              className="bank-button text-accent-ink"
-              aria-label={`${t("editor.addAchievement")} · ${factTitle(fact)}`}
-              onClick={() => setEditing({ kind: "achievement", contextId: fact.id })}
-            >
-              {t("editor.addAchievement")}
-            </button>
+            <>
+              <button
+                type="button"
+                className="bank-button text-accent-ink"
+                aria-label={`${t("editor.addAchievement")} · ${factTitle(fact)}`}
+                onClick={() => setEditing({ kind: "achievement", contextId: fact.id })}
+              >
+                {t("editor.addAchievement")}
+              </button>
+              <button
+                type="button"
+                className="bank-button"
+                aria-label={t("interview.factTitle", { title: factTitle(fact) })}
+                onClick={() => setInterview({ kind: "fact", factId: fact.id })}
+              >
+                {t("interview.more")}
+              </button>
+            </>
           )}
         </div>
         {achievements.length > 0 && (
@@ -264,7 +297,14 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
             <button type="button" className="bank-button" onClick={() => setImportingResume(true)}>
               {t("import.title")}
             </button>
-            <button type="button" className="bank-button" onClick={() => setSettingsOpen(true)}>
+            <button
+              type="button"
+              className="bank-button"
+              onClick={() => {
+                setLlmSettings(loadLlmSettings());
+                setSettingsOpen(true);
+              }}
+            >
               {t("editor.settings")}
             </button>
           </div>
@@ -415,10 +455,49 @@ export default function BankEditor({ onSaved }: { onSaved: (saved: boolean) => v
       {bank && settingsOpen && (
         <Modal title={t("editor.settings")} onClose={() => setSettingsOpen(false)}>
           <div className="space-y-5">
+            <section className="space-y-3">
+              <h3 className="font-display text-lg">{t("llm.section")}</h3>
+              <p className="break-words text-sm [overflow-wrap:anywhere]">
+                {llmSettings
+                  ? `${llmPreset ? t(`llm.preset.${llmPreset}`) : t(`llm.${llmSettings.provider}`)} · ${llmSettings.model}`
+                  : t("llm.unconfigured")}
+              </p>
+              <button type="button" className="bank-button" onClick={() => setLlmOpen(true)}>
+                {t("llm.configure")}
+              </button>
+            </section>
             <SyncCard sync={sync} />
             <DangerZone bank={bank} />
           </div>
         </Modal>
+      )}
+      {llmOpen && (
+        <LlmDialog
+          onClose={() => {
+            setLlmSettings(loadLlmSettings());
+            setLlmOpen(false);
+          }}
+          onSave={(settings) => {
+            setLlmSettings(settings);
+            setLlmOpen(false);
+          }}
+        />
+      )}
+      {bank && interview && (
+        <InterviewPanel
+          bank={bank}
+          topic={interview}
+          onClose={() => setInterview(undefined)}
+          onAddFacts={(facts) =>
+            commit({
+              ...bank,
+              facts: [
+                ...bank.facts,
+                ...facts.filter((fact) => !bank.facts.some((saved) => saved.id === fact.id)),
+              ],
+            })
+          }
+        />
       )}
       {importingResume && (
         <ImportResume bank={bank} onSave={commit} onClose={() => setImportingResume(false)} />

@@ -14,7 +14,7 @@ It runs in your browser, with no account and with the LLM provider you choose.
 ## How to use it
 
 1. **1 Fact bank:** choose one of three starting points. Use **Start from scratch** to fill in your profile and record real facts. Use **Import JSON** to load a saved bank. Use **Import an old resume** to paste text or select **Open PDF or TXT file**. Set up your provider with **Configure LLM**, then select **Extract facts**. Review each item and select **Confirm** before adding it. **Add to bank (N)** shows the confirmed count; pending or discarded items are left out. If the PDF has no selectable text, paste the text instead. To try the workflow, select **load example**.
-2. **2 Job and match:** paste the vacancy into **Job description**. **Job fit** shows matching skills, **Gaps** and the most relevant facts. Only fill a gap if you have a real fact to record. Configure your LLM and select **Generate resume**.
+2. **2 Job and match:** paste the vacancy into **Job description**. **Job fit** shows matching skills, **Gaps** and the most relevant facts. Only fill a gap if you have a real fact to record. If you think you did something like it but never recorded it, select **Talk**: the AI asks without suggesting and proposes facts quoting what you wrote, for you to confirm. In the bank, **Tell me more** does the same for an experience, project or education. Configure your LLM (also under **Settings**) and select **Generate resume**.
 3. **3 Review:** read the resume and check its sources and violations. Edit or remove problematic bullets, or select **Generate again**. **Export PDF** is available only with zero violations. In the print dialog, choose **Save as PDF**.
 
 ## How Encaixe checks for invented claims
@@ -89,7 +89,7 @@ v1.0 is out; v1.1 (resume quality) is in progress. Follow the [roadmap](https://
 - [x] Optional sync across devices in your own Supabase project ([setup guide, in Portuguese](docs/supabase.md)), with password sign-in and a connection link
 - [x] Models fetched from the provider with automatic fallback; Anthropic, OpenAI, Gemini, Groq, OpenRouter, DeepSeek and local Ollama
 - [x] Mobile-first interface, danger zone and security audit ([SECURITY.md](SECURITY.md))
-- [ ] AI conversation to discover facts missing from the bank (v1.1)
+- [x] AI conversation to discover facts missing from the bank, without suggesting anything
 - [ ] Encaixe for any field and profiles in the same browser (v1.2)
 
 ### CLI
@@ -125,7 +125,7 @@ Product and architecture decisions are recorded in [docs/decisions.md](docs/deci
 Encaixe is free and open source. If it helped you, consider supporting it:
 
 - **Pix** (random key, Brazil only): `1ef18b8b-aa5f-42df-8bf4-19c16ba3b1dd`
-- **GitHub Sponsors**: coming soon.
+- **GitHub Sponsors**: [github.com/sponsors/DiegoCard117](https://github.com/sponsors/DiegoCard117), also via the repository's "Sponsor" button.
 
 In the app, the "Support the project" link is in the footer.
 

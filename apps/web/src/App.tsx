@@ -16,6 +16,7 @@ export default function App() {
   const [hash, setHash] = useState(() => location.hash);
   const [saved, setSaved] = useState(() => loadBank().status === "ok");
   const [supporting, setSupporting] = useState(false);
+  const [bankVersion, setBankVersion] = useState(0);
   const stored = loadBank();
   const bank = stored.status === "ok" ? stored.bank : undefined;
   const stepRoute = hash === "#/vaga" || hash === "#/revisao";
@@ -103,10 +104,12 @@ export default function App() {
         </span>
       </nav>
       <div hidden={hash === "#/playground" || (stepRoute && !!bank)}>
-        <BankEditor onSaved={setSaved} />
+        <BankEditor key={bankVersion} onSaved={setSaved} />
       </div>
       {hash === "#/playground" && <Playground />}
-      {hash === "#/vaga" && bank && <JobStep bank={bank} />}
+      {hash === "#/vaga" && bank && (
+        <JobStep bank={bank} onBankChange={() => setBankVersion((version) => version + 1)} />
+      )}
       {hash === "#/revisao" && bank && <ReviewStep bank={bank} />}
       <footer className="mt-12 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-line pt-6 text-sm text-muted print:hidden">
         <a

@@ -14,7 +14,7 @@ Tudo roda no navegador, sem conta e com o provedor de LLM que você escolher.
 ## Como usar
 
 1. **1 Banco de fatos:** escolha uma das três entradas. Em **Começar do zero**, preencha seu perfil e cadastre fatos reais. Em **Importar JSON**, carregue um banco salvo. Em **Importar currículo antigo**, cole o texto ou use **Abrir arquivo PDF ou TXT**. Configure o provedor em **Configurar LLM** e use **Extrair fatos**. Revise cada item e use **Confirmar** antes de adicioná-lo. O botão **Adicionar ao banco (N)** mostra a quantidade confirmada; itens pendentes ou descartados ficam de fora. Se o PDF não tiver texto selecionável, cole o texto. Para conhecer o fluxo, use **carregar exemplo**.
-2. **2 Vaga e aderência:** cole a vaga em **Descrição da vaga**. Veja em **Aderência à vaga** as skills que batem, as **Lacunas** e os fatos mais relevantes. Uma lacuna só deve ser preenchida se você tiver um fato real para cadastrar. Configure sua LLM e use **Gerar currículo**.
+2. **2 Vaga e aderência:** cole a vaga em **Descrição da vaga**. Veja em **Aderência à vaga** as skills que batem, as **Lacunas** e os fatos mais relevantes. Uma lacuna só deve ser preenchida se você tiver um fato real para cadastrar. Se acha que fez algo parecido mas não cadastrou, use **Conversar**: a IA pergunta, sem sugerir, e propõe fatos citando o que você escreveu, para você confirmar. No banco, **Conte mais** faz o mesmo para uma experiência, projeto ou formação. Configure sua LLM (também em **Configurações**) e use **Gerar currículo**.
 3. **3 Revisão:** leia o currículo e confira as fontes e as violações. Edite ou remova os bullets com problemas, ou use **Gerar de novo**. **Exportar PDF** só fica disponível com zero violações. Na janela de impressão, escolha **Salvar como PDF**.
 
 ## Como o Encaixe evita invenção
@@ -90,7 +90,7 @@ v1.0 publicada; em andamento a v1.1 (qualidade do currículo). Acompanhe o [road
 - [x] Sincronização opcional entre dispositivos no seu próprio projeto Supabase ([como configurar](docs/supabase.md)), com senha e link de conexão
 - [x] Modelos vindos do provedor com plano B automático; Anthropic, OpenAI, Gemini, Groq, OpenRouter, DeepSeek e Ollama local
 - [x] Interface pensada para celular, zona de perigo e auditoria de segurança ([SECURITY.md](SECURITY.md))
-- [ ] Conversa com a IA para descobrir fatos que faltam no banco (v1.1)
+- [x] Conversa com a IA para descobrir fatos que faltam no banco, sem sugerir nada
 - [ ] Encaixe para qualquer área e perfis no mesmo navegador (v1.2)
 
 ### CLI
@@ -126,7 +126,7 @@ Veja as decisões de produto e arquitetura em [docs/decisions.md](docs/decisions
 O Encaixe é gratuito e de código aberto. Se ele te ajudou, considere apoiar:
 
 - **Pix** (chave aleatória): `1ef18b8b-aa5f-42df-8bf4-19c16ba3b1dd`
-- **GitHub Sponsors**: em breve.
+- **GitHub Sponsors**: [github.com/sponsors/DiegoCard117](https://github.com/sponsors/DiegoCard117), também pelo botão "Sponsor" do repositório.
 
 No app, o link "Apoie o projeto" fica no rodapé.
 

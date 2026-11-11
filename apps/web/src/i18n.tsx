@@ -6,6 +6,25 @@ import { VALIDATION_CODES, type ValidationCode } from "../../../packages/core/sr
 export type Locale = "pt-BR" | "en";
 
 const ptBR = {
+  "llm.section": "IA (LLM)",
+  "llm.unconfigured": "Não configurada",
+  "interview.gapTitle": "Conversar sobre {term}",
+  "interview.factTitle": "Conte mais sobre {title}",
+  "interview.more": "Conte mais",
+  "interview.talk": "Conversar",
+  "interview.notice": "Só entra o que você disser. A IA não sugere tecnologias nem números.",
+  "interview.messages": "Conversa para lembrar fatos",
+  "interview.person": "Você",
+  "interview.assistant": "IA",
+  "interview.evidence": "Você disse: “{evidence}”",
+  "interview.message": "Sua resposta",
+  "interview.send": "Enviar",
+  "interview.added": "Adicionado",
+  "interview.closeConfirm": "Há propostas pendentes. Fechar e descartar esta conversa?",
+  "interview.discardedSkill":
+    "Uma habilidade citada foi descartada. Edite a conquista para remover esse vínculo antes de confirmar.",
+  "interview.progress.reading": "Lendo seus fatos…",
+  "interview.progress.thinking": "Pensando na próxima pergunta…",
   "sync.connect": "Conectar Supabase",
   "sync.url": "URL do projeto",
   "sync.key": "Chave pública (anon ou publishable)",
@@ -437,6 +456,25 @@ const ptBR = {
 };
 
 const en: Record<keyof typeof ptBR, string> = {
+  "llm.section": "AI (LLM)",
+  "llm.unconfigured": "Not configured",
+  "interview.gapTitle": "Talk about {term}",
+  "interview.factTitle": "Tell me more about {title}",
+  "interview.more": "Tell me more",
+  "interview.talk": "Talk",
+  "interview.notice": "Only what you say gets added. AI does not suggest technologies or numbers.",
+  "interview.messages": "Conversation to recall facts",
+  "interview.person": "You",
+  "interview.assistant": "AI",
+  "interview.evidence": "You said: “{evidence}”",
+  "interview.message": "Your answer",
+  "interview.send": "Send",
+  "interview.added": "Added",
+  "interview.closeConfirm": "There are pending proposals. Close and discard this conversation?",
+  "interview.discardedSkill":
+    "A referenced skill was discarded. Edit the achievement to remove that link before confirming.",
+  "interview.progress.reading": "Reading your facts…",
+  "interview.progress.thinking": "Thinking about the next question…",
   "sync.connect": "Connect Supabase",
   "sync.url": "Project URL",
   "sync.key": "Public key (anon or publishable)",

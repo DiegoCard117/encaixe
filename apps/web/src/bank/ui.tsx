@@ -41,20 +41,28 @@ export function Modal({
   onClose,
   children,
   wide = false,
+  variant,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   wide?: boolean;
+  variant?: "drawer";
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const { t } = useI18n();
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
     const dialog = ref.current!;
     const previous = document.activeElement;
     dialog.showModal();
+    // Trocar de etapa esconde o editor, mas um <dialog> modal escondido deixaria a página inerte.
+    const leave = () => closeRef.current();
+    window.addEventListener("hashchange", leave);
     return () => {
+      window.removeEventListener("hashchange", leave);
       dialog.close();
       if (previous instanceof HTMLElement) previous.focus();
     };
@@ -63,6 +71,7 @@ export function Modal({
     <dialog
       ref={ref}
       onCancel={(event) => {
+        event.preventDefault();
         event.stopPropagation();
         onClose();
       }}
@@ -70,7 +79,7 @@ export function Modal({
         if (!ref.current?.open) onClose();
       }}
       aria-labelledby={titleId}
-      className={`bank-dialog ${wide ? "bank-dialog-wide" : ""}`}
+      className={`bank-dialog ${wide ? "bank-dialog-wide" : ""} ${variant === "drawer" ? "bank-dialog-drawer" : ""}`}
     >
       {/* Cabeçalho fixo: "Fechar" continua ao alcance em janelas longas, como a revisão da importação. */}
       <div className="bank-dialog-header">
