@@ -67,7 +67,7 @@ Use Conventional Commits em português. Exemplos:
 
 Explique o porquê da mudança no corpo do commit. Inclua `Closes #N` quando ele fechar uma issue.
 
-Atualize `README.md`, `README.en.md` e `docs/decisions.md` no mesmo commit que mudar estrutura, comandos ou decisões.
+Atualize `README.md`, `README.en.md` e `docs/decisions.md` no mesmo commit que mudar estrutura, comandos ou decisões. Registre entregas no `CHANGELOG.md` (por marco, apontando para a issue) e mantenha o status da issue no [Project](https://github.com/users/DiegoCard117/projects/2).
 
 ## Pull requests
 

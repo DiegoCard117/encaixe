@@ -72,7 +72,7 @@ Use **Exportar JSON** para manter um backup do banco de fatos. O armazenamento d
 
 ## Status
 
-Em desenvolvimento. Acompanhe o [roadmap](https://github.com/users/DiegoCard117/projects/2).
+v1.0 publicada; em andamento a v1.1 (qualidade do currículo). Acompanhe o [roadmap](https://github.com/users/DiegoCard117/projects/2), as [issues](https://github.com/DiegoCard117/encaixe/issues) e o histórico em [CHANGELOG.md](CHANGELOG.md).
 
 - [x] Schema do banco de fatos e do rascunho gerado
 - [x] Checador anti-invenção
@@ -87,7 +87,11 @@ Em desenvolvimento. Acompanhe o [roadmap](https://github.com/users/DiegoCard117/
 - [x] Importação de currículo antigo (texto colado, PDF ou TXT): a LLM transcreve os fatos, o app aponta números e skills que
       não estão no texto e cada fato só entra no banco depois de confirmado
 - [x] CLI para validar o banco, checar um rascunho e ver a aderência (`pnpm cli`)
-- [x] Sincronização opcional entre dispositivos no seu próprio projeto Supabase ([como configurar](docs/supabase.md))
+- [x] Sincronização opcional entre dispositivos no seu próprio projeto Supabase ([como configurar](docs/supabase.md)), com senha e link de conexão
+- [x] Modelos vindos do provedor com plano B automático; Anthropic, OpenAI, Gemini, Groq, OpenRouter, DeepSeek e Ollama local
+- [x] Interface pensada para celular, zona de perigo e auditoria de segurança ([SECURITY.md](SECURITY.md))
+- [ ] Conversa com a IA para descobrir fatos que faltam no banco (v1.1)
+- [ ] Encaixe para qualquer área e perfis no mesmo navegador (v1.2)
 
 ### CLI
 

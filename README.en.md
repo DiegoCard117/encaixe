@@ -72,7 +72,7 @@ Use **Export JSON** to back up your fact bank. Browser storage is no substitute 
 
 ## Status
 
-In development. Follow the [roadmap](https://github.com/users/DiegoCard117/projects/2).
+v1.0 is out; v1.1 (resume quality) is in progress. Follow the [roadmap](https://github.com/users/DiegoCard117/projects/2), the [issues](https://github.com/DiegoCard117/encaixe/issues) and the history in [CHANGELOG.md](CHANGELOG.md) (in Portuguese).
 
 - [x] Fact bank and generated draft schemas
 - [x] Checker for invented claims
@@ -86,7 +86,11 @@ In development. Follow the [roadmap](https://github.com/users/DiegoCard117/proje
 - [x] GitHub Pages deployment on every push to `main`
 - [x] Old resume import (pasted text, PDF or TXT): the LLM transcribes facts, the app flags numbers and skills missing from the source, and each fact enters the bank only after confirmation
 - [x] CLI to validate a bank, check a draft and see job fit (`pnpm cli`)
-- [x] Optional sync across devices in your own Supabase project ([setup guide, in Portuguese](docs/supabase.md))
+- [x] Optional sync across devices in your own Supabase project ([setup guide, in Portuguese](docs/supabase.md)), with password sign-in and a connection link
+- [x] Models fetched from the provider with automatic fallback; Anthropic, OpenAI, Gemini, Groq, OpenRouter, DeepSeek and local Ollama
+- [x] Mobile-first interface, danger zone and security audit ([SECURITY.md](SECURITY.md))
+- [ ] AI conversation to discover facts missing from the bank (v1.1)
+- [ ] Encaixe for any field and profiles in the same browser (v1.2)
 
 ### CLI
 
