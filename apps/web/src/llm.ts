@@ -6,6 +6,7 @@ export const presets = {
   gemini: "https://generativelanguage.googleapis.com/v1beta/openai",
   groq: "https://api.groq.com/openai/v1",
   openrouter: "https://openrouter.ai/api/v1",
+  deepseek: "https://api.deepseek.com",
   ollama: "http://localhost:11434/v1",
 } as const;
 
@@ -224,8 +225,11 @@ export async function listModels(
 
 export function rankModels(ids: string[], provider: Provider, baseUrl: string): string[] {
   const gemini = baseUrl.includes("generativelanguage");
+  const deepseek = baseUrl.includes("deepseek");
   const group = (id: string) => {
     if (gemini) return /flash/i.test(id) ? (/lite/i.test(id) ? 1 : 0) : 2;
+    // DeepSeek: "pro" (mais capaz, o equivalente ao Sonnet) antes de "flash".
+    if (deepseek) return /pro/i.test(id) ? 0 : /flash/i.test(id) ? 1 : 2;
     if (provider === "anthropic") {
       const index = ["opus", "sonnet", "haiku"].findIndex((name) => id.toLowerCase().includes(name));
       return index < 0 ? 3 : index;

@@ -304,3 +304,11 @@ describe("pickFallbacks", () => {
     ]);
   });
 });
+
+describe("rankModels DeepSeek", () => {
+  it("recomenda o pro antes do flash", () => {
+    expect(
+      rankModels(["deepseek-v4-flash", "deepseek-v4-pro"], "openai-compatible", presets.deepseek),
+    ).toEqual(["deepseek-v4-pro", "deepseek-v4-flash"]);
+  });
+});

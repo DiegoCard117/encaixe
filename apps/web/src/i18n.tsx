@@ -153,6 +153,7 @@ const ptBR = {
   "llm.preset.gemini": "Gemini",
   "llm.preset.groq": "Groq",
   "llm.preset.openrouter": "OpenRouter",
+  "llm.preset.deepseek": "DeepSeek",
   "llm.preset.ollama": "Ollama",
   "llm.preset.custom": "Personalizado",
   "llm.baseUrl": "Endereço da API",
@@ -167,6 +168,8 @@ const ptBR = {
   "llm.fallbacks": "Se o modelo estiver indisponível ou sobrecarregado, o app tenta: {fallbacks}.",
   "llm.modelHint.groq": "ex.: llama-…",
   "llm.modelHint.openrouter": "Identificador do modelo no OpenRouter, ex.: provedor/modelo.",
+  "llm.modelHint.deepseek":
+    "ex.: deepseek-v4-pro (mais capaz) ou deepseek-v4-flash (mais rápido). Dados processados na China.",
   "llm.modelHint.ollama": "Nome do modelo baixado, ex.: llama…",
   "llm.modelHint.custom": "Informe o identificador do modelo aceito pelo provedor.",
   "llm.ollamaHelp": "O Ollama precisa estar rodando e liberar o app no CORS: OLLAMA_ORIGINS={origin}",
@@ -580,6 +583,7 @@ const en: Record<keyof typeof ptBR, string> = {
   "llm.preset.gemini": "Gemini",
   "llm.preset.groq": "Groq",
   "llm.preset.openrouter": "OpenRouter",
+  "llm.preset.deepseek": "DeepSeek",
   "llm.preset.ollama": "Ollama",
   "llm.preset.custom": "Custom",
   "llm.baseUrl": "API address",
@@ -594,6 +598,8 @@ const en: Record<keyof typeof ptBR, string> = {
   "llm.fallbacks": "If the model is unavailable or overloaded, the app tries: {fallbacks}.",
   "llm.modelHint.groq": "e.g. llama-…",
   "llm.modelHint.openrouter": "Model ID on OpenRouter, e.g. provider/model.",
+  "llm.modelHint.deepseek":
+    "e.g. deepseek-v4-pro (more capable) or deepseek-v4-flash (faster). Data is processed in China.",
   "llm.modelHint.ollama": "Name of the downloaded model, e.g. llama…",
   "llm.modelHint.custom": "Enter the model ID accepted by the provider.",
   "llm.ollamaHelp": "Ollama must be running and allow the app through CORS: OLLAMA_ORIGINS={origin}",
