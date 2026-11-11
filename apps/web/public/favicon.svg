@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28">
+  <style>
+    .encaixe { fill: #0e6b5c; }
+    .tinta { fill: #15171c; }
+    @media (prefers-color-scheme: dark) {
+      .encaixe { fill: #3cc3a3; }
+      .tinta { fill: #ecedef; }
+    }
+  </style>
+  <path class="encaixe" d="M3 5H13V11H9V17H13V23H3Z" />
+  <path class="tinta" d="M15 5H25V23H15V16H10V12H15Z" />
+</svg>
